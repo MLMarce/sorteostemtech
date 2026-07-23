@@ -36,9 +36,9 @@ export default function RootLayout({
               <span className="text-cyan-400 font-bold">TEMTECH Studio</span> © {new Date().getFullYear()} — Plataforma de Sorteos Holográficos.
             </div>
             <div className="flex space-x-4">
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-cyan-400">Instagram</a>
-              <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-cyan-400">Facebook</a>
-              <a href="https://wa.me/3512345678" target="_blank" rel="noreferrer" className="hover:text-cyan-400">WhatsApp</a>
+              <a href="https://instagram.com/temtech_studio" target="_blank" rel="noreferrer" className="hover:text-cyan-400">Instagram</a>
+              <a href="https://facebook.com/temtechstudio" target="_blank" rel="noreferrer" className="hover:text-cyan-400">Facebook</a>
+              <a href="https://wa.me/3518509827" target="_blank" rel="noreferrer" className="hover:text-cyan-400">WhatsApp</a>
             </div>
           </div>
         </footer>
