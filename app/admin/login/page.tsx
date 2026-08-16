@@ -2,20 +2,25 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
+import { Lock, ShieldCheck, Sparkles, ArrowRight, UserCheck } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
+import { INITIAL_ADMINS } from '@/lib/supabaseClient';
 
 export default function AdminLoginPage() {
-  const router = Router();
-  const { setAdminLoggedIn } = useAppStore();
-  const [email, setEmail] = useState('admin@temtech.studio');
-  const [password, setPassword] = useState('');
+  const router = useRouter();
+  const { setAdminLoggedIn, setActiveAdminProfile, activeAdmin } = useAppStore();
+  const [selectedAdminId, setSelectedAdminId] = useState(activeAdmin.id || INITIAL_ADMINS[0].id);
+  const [email, setEmail] = useState('admin1@temtech.com');
+  const [password, setPassword] = useState('123456');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    const adminToLogin = INITIAL_ADMINS.find(a => a.id === selectedAdminId) || INITIAL_ADMINS[0];
+    
+    setActiveAdminProfile(adminToLogin);
     setAdminLoggedIn(true);
-    toast.success('¡Autenticación de Administrador exitosa!');
+    toast.success(`¡Bienvenido/a ${adminToLogin.full_name}! Autenticación exitosa.`);
     router.push('/admin');
   };
 
@@ -28,13 +33,39 @@ export default function AdminLoginPage() {
         </div>
 
         <span className="text-xs font-mono text-cyan-400 block uppercase mb-1 tracking-widest">
-          ACCESO RESTRINGIDO
+          ACCESO RESTRINGIDO A ADMINISTRADORES
         </span>
-        <h2 className="text-2xl font-extrabold text-white mb-6">Panel Administrador</h2>
+        <h2 className="text-2xl font-extrabold text-white mb-2">Temtech Sorteos SaaS</h2>
+        <p className="text-xs text-slate-400 mb-6 font-mono">
+          Selecciona una cuenta administradora o ingresa credenciales Supabase Auth
+        </p>
 
         <form onSubmit={handleLogin} className="space-y-4 text-left">
           <div>
-            <label className="block text-xs font-mono text-gray-300 mb-1">Email Supabase Admin</label>
+            <label className="block text-xs font-mono text-cyan-300 mb-1 flex items-center space-x-1">
+              <UserCheck className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Seleccionar Cuenta Administradora (Prueba)</span>
+            </label>
+            <select
+              value={selectedAdminId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedAdminId(id);
+                const found = INITIAL_ADMINS.find(a => a.id === id);
+                if (found) setEmail(found.email);
+              }}
+              className="w-full bg-[#06070A] border border-cyan-500/40 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono focus:outline-none focus:border-cyan-400"
+            >
+              {INITIAL_ADMINS.map((adm) => (
+                <option key={adm.id} value={adm.id}>
+                  {adm.full_name} ({adm.subscription_plan.toUpperCase()})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-mono text-slate-300 mb-1">Email Administrador</label>
             <input
               type="email"
               value={email}
@@ -45,7 +76,7 @@ export default function AdminLoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-mono text-gray-300 mb-1">Contraseña</label>
+            <label className="block text-xs font-mono text-slate-300 mb-1">Contraseña</label>
             <input
               type="password"
               value={password}
@@ -58,10 +89,10 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 text-white font-extrabold text-sm font-mono tracking-wide shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all flex items-center justify-center space-x-2 mt-6"
+            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 text-black font-extrabold text-sm font-mono tracking-wide shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all flex items-center justify-center space-x-2 mt-6"
           >
-            <span>Iniciar Sesión</span>
-            <ArrowRight className="w-4 h-4" />
+            <span>Ingresar al Dashboard Admin</span>
+            <ArrowRight className="w-4 h-4 text-black" />
           </button>
         </form>
 
@@ -73,9 +104,4 @@ export default function AdminLoginPage() {
       </div>
     </div>
   );
-}
-
-function Router() {
-  const router = useRouter();
-  return router;
 }

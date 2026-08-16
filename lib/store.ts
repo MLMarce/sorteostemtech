@@ -1,18 +1,25 @@
 import { create } from 'zustand';
-import { Raffle, RaffleNumber, Settings, NumberStatus } from './types';
+import { Raffle, RaffleNumber, Settings, NumberStatus, AdminProfile } from './types';
 import { 
-  getMockRaffle, 
+  getMockRaffles,
   getMockNumbers, 
   getMockSettings, 
   saveMockNumbers, 
   saveMockRaffle,
-  saveMockSettings
+  saveMockSettings,
+  saveMockRaffles,
+  getActiveAdmin,
+  setActiveAdmin as setStoredActiveAdmin,
+  INITIAL_ADMINS
 } from './supabaseClient';
 
 interface AppState {
-  raffle: Raffle;
+  raffles: Raffle[];
+  activeRaffle: Raffle;
+  raffle: Raffle; // Backwards compatible alias for activeRaffle
   numbers: RaffleNumber[];
   settings: Settings;
+  activeAdmin: AdminProfile;
   selectedNumber: RaffleNumber | null;
   isReservationOpen: boolean;
   isQrModalOpen: boolean;
@@ -21,7 +28,9 @@ interface AppState {
   isAdminLoggedIn: boolean;
 
   // Actions
+  setActiveRaffle: (raffle: Raffle) => void;
   setRaffle: (raffle: Raffle) => void;
+  setRaffles: (raffles: Raffle[]) => void;
   setNumbers: (numbers: RaffleNumber[]) => void;
   updateNumberStatus: (
     num: number, 
@@ -34,77 +43,111 @@ interface AppState {
   setFilterStatus: (status: 'all' | NumberStatus) => void;
   setSearchQuery: (query: string) => void;
   setSettings: (settings: Settings) => void;
+  setActiveAdminProfile: (admin: AdminProfile) => void;
   setAdminLoggedIn: (loggedIn: boolean) => void;
   refreshFromStorage: () => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
-  raffle: getMockRaffle(),
-  numbers: getMockNumbers(),
-  settings: getMockSettings(),
-  selectedNumber: null,
-  isReservationOpen: false,
-  isQrModalOpen: false,
-  filterStatus: 'all',
-  searchQuery: '',
-  isAdminLoggedIn: true, // Default to true for easy admin testing
+export const useAppStore = create<AppState>((set, get) => {
+  const initialRaffles = getMockRaffles();
+  const initialActive = initialRaffles[0];
+  const initialAdmin = getActiveAdmin();
 
-  setRaffle: (raffle) => {
-    saveMockRaffle(raffle);
-    set({ raffle });
-  },
+  return {
+    raffles: initialRaffles,
+    activeRaffle: initialActive,
+    raffle: initialActive,
+    numbers: getMockNumbers(initialActive.id),
+    settings: getMockSettings(),
+    activeAdmin: initialAdmin,
+    selectedNumber: null,
+    isReservationOpen: false,
+    isQrModalOpen: false,
+    filterStatus: 'all',
+    searchQuery: '',
+    isAdminLoggedIn: true, // Default to true for easy admin testing
 
-  setNumbers: (numbers) => {
-    saveMockNumbers(numbers);
-    set({ numbers });
-  },
+    setActiveRaffle: (raffle) => {
+      const numbers = getMockNumbers(raffle.id);
+      saveMockRaffle(raffle);
+      set({ activeRaffle: raffle, raffle, numbers });
+    },
 
-  updateNumberStatus: (num, status, userData) => {
-    const currentNumbers = get().numbers;
-    const target = currentNumbers.find(n => n.number === num);
-    
-    if (!target) return false;
+    setRaffle: (raffle) => {
+      const numbers = getMockNumbers(raffle.id);
+      saveMockRaffle(raffle);
+      set({ activeRaffle: raffle, raffle, numbers });
+    },
 
-    // Concurrency check: If trying to reserve but it's no longer available
-    if (status === 'reserved' && target.status !== 'available') {
-      return false; // Failed because someone else reserved or bought it!
-    }
+    setRaffles: (raffles) => {
+      saveMockRaffles(raffles);
+      set({ raffles });
+    },
 
-    const updated = currentNumbers.map(n => {
-      if (n.number === num) {
-        return {
-          ...n,
-          status,
-          user_name: userData ? userData.name : n.user_name,
-          user_lastname: userData ? userData.lastname : n.user_lastname,
-          phone: userData ? userData.phone : n.phone,
-          reserved_at: status === 'reserved' ? new Date().toISOString() : n.reserved_at,
-          paid_at: status === 'paid' ? new Date().toISOString() : n.paid_at,
-        };
+    setNumbers: (numbers) => {
+      const activeId = get().activeRaffle.id;
+      saveMockNumbers(numbers, activeId);
+      set({ numbers });
+    },
+
+    updateNumberStatus: (num, status, userData) => {
+      const currentNumbers = get().numbers;
+      const activeRaffleId = get().activeRaffle.id;
+      const target = currentNumbers.find(n => n.number === num);
+      
+      if (!target) return false;
+
+      // Concurrency check: If trying to reserve but it's no longer available
+      if (status === 'reserved' && target.status !== 'available') {
+        return false;
       }
-      return n;
-    });
 
-    saveMockNumbers(updated);
-    set({ numbers: updated });
-    return true;
-  },
+      const updated = currentNumbers.map(n => {
+        if (n.number === num) {
+          return {
+            ...n,
+            status,
+            user_name: userData ? userData.name : n.user_name,
+            user_lastname: userData ? userData.lastname : n.user_lastname,
+            phone: userData ? userData.phone : n.phone,
+            reserved_at: status === 'reserved' ? new Date().toISOString() : n.reserved_at,
+            paid_at: status === 'paid' ? new Date().toISOString() : n.paid_at,
+          };
+        }
+        return n;
+      });
 
-  setSelectedNumber: (num) => set({ selectedNumber: num }),
-  setReservationOpen: (open) => set({ isReservationOpen: open }),
-  setQrModalOpen: (open) => set({ isQrModalOpen: open }),
-  setFilterStatus: (status) => set({ filterStatus: status }),
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setSettings: (settings) => {
-    saveMockSettings(settings);
-    set({ settings });
-  },
-  setAdminLoggedIn: (loggedIn) => set({ isAdminLoggedIn: loggedIn }),
-  refreshFromStorage: () => {
-    set({
-      raffle: getMockRaffle(),
-      numbers: getMockNumbers(),
-      settings: getMockSettings(),
-    });
-  }
-}));
+      saveMockNumbers(updated, activeRaffleId);
+      set({ numbers: updated });
+      return true;
+    },
+
+    setSelectedNumber: (num) => set({ selectedNumber: num }),
+    setReservationOpen: (open) => set({ isReservationOpen: open }),
+    setQrModalOpen: (open) => set({ isQrModalOpen: open }),
+    setFilterStatus: (status) => set({ filterStatus: status }),
+    setSearchQuery: (query) => set({ searchQuery: query }),
+    setSettings: (settings) => {
+      saveMockSettings(settings);
+      set({ settings });
+    },
+    setActiveAdminProfile: (admin) => {
+      setStoredActiveAdmin(admin);
+      set({ activeAdmin: admin });
+    },
+    setAdminLoggedIn: (loggedIn) => set({ isAdminLoggedIn: loggedIn }),
+    refreshFromStorage: () => {
+      const raffles = getMockRaffles();
+      const currentActiveId = get().activeRaffle.id;
+      const active = raffles.find(r => r.id === currentActiveId) || raffles[0];
+      set({
+        raffles,
+        activeRaffle: active,
+        raffle: active,
+        numbers: getMockNumbers(active.id),
+        settings: getMockSettings(),
+        activeAdmin: getActiveAdmin()
+      });
+    }
+  };
+});

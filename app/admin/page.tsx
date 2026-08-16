@@ -5,14 +5,14 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import StatCards from '@/components/admin/StatCards';
 import NumbersTable from '@/components/admin/NumbersTable';
 import { useAppStore } from '@/lib/store';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Ticket, Plus, Tv, Settings } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Ticket, Plus, Tv, Settings, UserCheck, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminDashboardPage() {
-  const { raffle, numbers } = useAppStore();
+  const { activeRaffle, numbers, activeAdmin } = useAppStore();
 
-  // Mock analytical data for velocity chart
+  // Analytical data for velocity chart
   const salesChartData = [
     { day: 'Lun', reservados: 4, vendidos: 2 },
     { day: 'Mar', reservados: 6, vendidos: 5 },
@@ -32,8 +32,16 @@ export default function AdminDashboardPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-xs font-mono text-cyan-400 block uppercase">PANEL PRINCIPAL</span>
-            <h1 className="text-3xl font-extrabold text-white">Dashboard de Sorteos</h1>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs font-mono text-cyan-400 block uppercase">PANEL PRINCIPAL SAAS</span>
+              <span className="px-2 py-0.5 rounded bg-violet-950 border border-violet-700 text-violet-300 font-mono text-[10px] uppercase font-bold">
+                Plan: {activeAdmin.subscription_plan}
+              </span>
+            </div>
+            <h1 className="text-3xl font-extrabold text-white">Dashboard del Administrador</h1>
+            <p className="text-xs text-slate-400 font-mono mt-1">
+              Sesión iniciada como: <strong className="text-white">{activeAdmin.full_name}</strong> ({activeAdmin.email})
+            </p>
           </div>
 
           <div className="flex items-center space-x-3">
@@ -41,16 +49,16 @@ export default function AdminDashboardPage() {
               href="/admin/raffles"
               className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs font-mono transition-all flex items-center space-x-2 shadow-lg shadow-cyan-500/20"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-black" />
               <span>Crear Sorteo</span>
             </Link>
 
             <Link
-              href="/sorteo"
+              href={`/sorteo?id=${activeRaffle.id}`}
               className="px-4 py-2.5 rounded-xl bg-violet-600/30 hover:bg-violet-600/50 border border-violet-500/40 text-violet-300 font-extrabold text-xs font-mono transition-all flex items-center space-x-2"
             >
               <Tv className="w-4 h-4 text-violet-400" />
-              <span>Iniciar Transmisión</span>
+              <span>Ver Mi Transmisión</span>
             </Link>
           </div>
         </div>
@@ -99,11 +107,11 @@ export default function AdminDashboardPage() {
           {/* Active Raffle Status */}
           <div className="glass-panel p-6 rounded-3xl border border-cyan-500/30 flex flex-col justify-between">
             <div>
-              <span className="text-xs text-cyan-400 font-mono block uppercase mb-1">SORTEO ACTIVO</span>
-              <h3 className="text-xl font-extrabold text-white">{raffle.title}</h3>
-              <p className="text-xs text-slate-400 mt-2 font-mono">Premio: <strong className="text-white">{raffle.prize}</strong></p>
-              <p className="text-xs text-slate-400 font-mono">Precio por número: <strong className="text-emerald-400">${raffle.price}</strong></p>
-              <p className="text-xs text-slate-400 font-mono">Fecha: <strong className="text-white">{raffle.draw_date} {raffle.draw_time}</strong></p>
+              <span className="text-xs text-cyan-400 font-mono block uppercase mb-1">SORTEO ACTIVO SELECCIONADO</span>
+              <h3 className="text-xl font-extrabold text-white">{activeRaffle.title}</h3>
+              <p className="text-xs text-slate-400 mt-2 font-mono">Premio: <strong className="text-white">{activeRaffle.prize}</strong></p>
+              <p className="text-xs text-slate-400 font-mono">Precio por número: <strong className="text-emerald-400">${activeRaffle.price}</strong></p>
+              <p className="text-xs text-slate-400 font-mono">Fecha: <strong className="text-white">{activeRaffle.draw_date} {activeRaffle.draw_time}</strong></p>
             </div>
 
             <div className="mt-6 pt-4 border-t border-slate-800 space-y-2">
