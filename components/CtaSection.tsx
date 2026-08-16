@@ -36,7 +36,7 @@ export default function CtaSection() {
           {/* Action buttons */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
             <Link
-              href="/admin/login"
+              href="/admin/login?mode=register"
               className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 text-black font-extrabold text-base font-mono tracking-wide shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center space-x-3 group"
             >
               <Trophy className="w-5 h-5 text-yellow-300 group-hover:rotate-12 transition-transform" />

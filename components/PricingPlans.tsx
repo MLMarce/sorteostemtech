@@ -21,7 +21,7 @@ export default function PricingPlans() {
         'Soporte comunitario'
       ],
       ctaText: 'Empezar Gratis',
-      ctaLink: '/admin/login',
+      ctaLink: '/admin/login?mode=register&plan=gratis',
       isPopular: false,
       badgeColor: 'border-slate-700 text-slate-300'
     },
@@ -40,7 +40,7 @@ export default function PricingPlans() {
         'Soporte prioritario por WhatsApp'
       ],
       ctaText: 'Obtener Plan Pro',
-      ctaLink: '/admin/login?plan=pro',
+      ctaLink: '/admin/login?mode=register&plan=pro',
       isPopular: true,
       badgeColor: 'border-cyan-400 text-cyan-300 bg-cyan-950/60'
     },
@@ -59,7 +59,7 @@ export default function PricingPlans() {
         'Soporte técnico VIP 24/7 asignado'
       ],
       ctaText: 'Suscribirse a Ilimitado',
-      ctaLink: '/admin/login?plan=ilimitado',
+      ctaLink: '/admin/login?mode=register&plan=ilimitado',
       isPopular: false,
       badgeColor: 'border-violet-400 text-violet-300 bg-violet-950/60'
     }

@@ -7,8 +7,9 @@ import WinnerRoulette from '@/components/WinnerRoulette';
 import RaffleBoard from '@/components/RaffleBoard';
 import ReservationModal from '@/components/ReservationModal';
 import { RaffleNumber } from '@/lib/types';
-import { Radio, Tv, ShieldCheck, UserCheck, Lock } from 'lucide-react';
+import { Tv, ShieldCheck, Lock, Share2, Copy, Check } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { toast } from 'sonner';
 
 function SorteoContent() {
   const searchParams = useSearchParams();
@@ -16,6 +17,7 @@ function SorteoContent() {
 
   const { raffles, activeRaffle, setActiveRaffle, isAdminLoggedIn, setAdminLoggedIn } = useAppStore();
   const [selectedTicket, setSelectedTicket] = useState<RaffleNumber | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Sync active raffle from searchParam if provided
   useEffect(() => {
@@ -27,11 +29,26 @@ function SorteoContent() {
     }
   }, [raffleIdParam, raffles, activeRaffle.id, setActiveRaffle]);
 
+  const handleShare = () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    const text = `¡Unite al sorteo "${activeRaffle.title}"! Ganate ${activeRaffle.prize} por solo $${activeRaffle.price.toLocaleString('es-AR')}. ¡Reservá tu número ahora! ${url}`;
+
+    if (navigator.share) {
+      navigator.share({ title: activeRaffle.title, text, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast.success('¡Enlace copiado al portapapeles!');
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       
       {/* Studio Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 glass-panel p-6 rounded-3xl border border-violet-500/30 bg-gradient-to-r from-violet-950/30 via-[#0D1117] to-cyan-950/30">
+        {/* Left: Title & Live badge */}
         <div className="flex items-center space-x-3">
           <div className="p-3 rounded-2xl bg-violet-600/20 text-violet-400 border border-violet-500/40">
             <Tv className="w-6 h-6 animate-pulse" />
@@ -49,41 +66,53 @@ function SorteoContent() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="text-right font-mono text-xs text-slate-300">
+        {/* Right: Actions row */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Organizer info */}
+          <div className="font-mono text-xs text-slate-300 text-right">
             <span className="text-slate-400 block">ORGANIZADO POR</span>
             <span className="text-cyan-400 font-bold">{activeRaffle.admin_name || 'Admin Creador'}</span>
           </div>
 
-          {/* Mode Switcher Guard Demo Badge */}
+          {/* Share button */}
+          <button
+            onClick={handleShare}
+            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-semibold transition-all"
+            title="Compartir sorteo"
+          >
+            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+            <span>{copied ? 'Copiado!' : 'Compartir'}</span>
+          </button>
+
+          {/* Admin / Espectador mode toggle (demo) */}
           <button
             onClick={() => setAdminLoggedIn(!isAdminLoggedIn)}
-            className={`px-3.5 py-1.5 rounded-xl font-mono text-xs border flex items-center space-x-1.5 transition-all ${
+            className={`px-3.5 py-2 rounded-xl font-mono text-xs border flex items-center space-x-1.5 transition-all ${
               isAdminLoggedIn
                 ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40'
                 : 'bg-slate-900 text-slate-400 border-slate-700'
             }`}
-            title="Conmutar vista de Admin / Participante para pruebas"
+            title="Conmutar vista Admin / Espectador (demo)"
           >
             {isAdminLoggedIn ? (
               <>
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Modo Admin Activo</span>
+                <span>Admin</span>
               </>
             ) : (
               <>
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
-                <span>Modo Espectador</span>
+                <span>Espectador</span>
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* 1. Transmisión en Vivo (Personalizada por Admin) */}
+      {/* 1. Transmisión en Vivo (personalizada por admin creador) */}
       <LiveStreamPlayer isAdmin={isAdminLoggedIn} />
 
-      {/* 2. Ruleta de Sorteo (Solo el Admin puede activar) */}
+      {/* 2. Ruleta de Sorteo (solo el admin puede disparar) */}
       <WinnerRoulette isAdmin={isAdminLoggedIn} />
 
       {/* 3. Cartón de Números en Vivo */}

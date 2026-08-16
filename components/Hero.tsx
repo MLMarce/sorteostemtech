@@ -83,10 +83,10 @@ export default function Hero() {
             </button>
 
             <Link
-              href="/admin/login"
+              href="/admin/login?mode=register"
               className="px-6 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/40 text-cyan-400 font-extrabold text-sm font-mono tracking-wide transition-all duration-300 flex items-center justify-center space-x-2 text-center"
             >
-              <span>Crear Cuenta Creador</span>
+              <span>Crear Cuenta Gratis</span>
             </Link>
           </div>
         </motion.div>
