@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Sparkles, X, Mail, User, ArrowRight, UserPlus, ShieldCheck } from 'lucide-react';
+import { Lock, Sparkles, X, Mail, User, ArrowRight, UserPlus, ShieldCheck, CheckCircle, RefreshCw, Send } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { SubscriptionPlan } from '@/lib/types';
 import { toast } from 'sonner';
@@ -27,6 +27,9 @@ export default function AuthModal() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(authModalPlan || 'gratis');
   const [loading, setLoading] = useState(false);
+  const [showVerifyScreen, setShowVerifyScreen] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     if (authModalPlan) {
@@ -52,7 +55,13 @@ export default function AuthModal() {
       });
 
       if (error) {
-        toast.error(error.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+        if (error.message.includes('Email not confirmed') || error.message.includes('Email link is invalid')) {
+          setRegisteredEmail(email);
+          setShowVerifyScreen(true);
+          toast.info('Debes verificar tu correo antes de poder ingresar.');
+        } else {
+          toast.error(error.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+        }
         setLoading(false);
         return;
       }
@@ -116,6 +125,16 @@ export default function AuthModal() {
       }
 
       if (data.user) {
+        // If session is null, Supabase requires email confirmation
+        if (!data.session) {
+          setRegisteredEmail(email);
+          setShowVerifyScreen(true);
+          toast.success('¡Cuenta registrada! Por favor verifica tu correo para continuar.');
+          setLoading(false);
+          return;
+        }
+
+        // If session exists immediately
         const profile = await getProfile(data.user.id);
         setActiveAdminProfile(profile || {
           id: data.user.id,
@@ -135,6 +154,26 @@ export default function AuthModal() {
       toast.error(err.message || 'Ocurrió un error al registrarse.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!registeredEmail) return;
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: registeredEmail,
+      });
+      if (error) {
+        toast.error(error.message || 'Error al reenviar el correo.');
+      } else {
+        toast.success('¡Correo de verificación reenviado! Revisa tu bandeja de entrada y spam.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al reenviar correo.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -173,218 +212,280 @@ export default function AuthModal() {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Icon */}
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-violet-600/20 border border-cyan-500/30 flex items-center justify-center mx-auto mb-4">
-          {authModalMode === 'login'
-            ? <Lock className="w-7 h-7 text-cyan-400 animate-pulse" />
-            : <Sparkles className="w-7 h-7 text-violet-400 animate-pulse" />
-          }
-        </div>
+        {/* ─── EMAIL VERIFICATION NOTICE SCREEN ─── */}
+        {showVerifyScreen ? (
+          <div className="text-center space-y-5 py-4">
+            <div className="w-16 h-16 rounded-full bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center mx-auto shadow-xl shadow-cyan-500/30 animate-pulse">
+              <Mail className="w-8 h-8 text-cyan-300" />
+            </div>
 
-        {/* Mode Switcher Tabs */}
-        <div className="flex rounded-2xl bg-slate-900/80 border border-slate-800 p-1 mb-5">
-          <button
-            type="button"
-            onClick={() => setAuthModalMode('login')}
-            className={`flex-1 py-2 rounded-xl text-xs font-mono font-bold transition-all duration-200 ${
-              authModalMode === 'login'
-                ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/30'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Iniciar Sesión
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthModalMode('register')}
-            className={`flex-1 py-2 rounded-xl text-xs font-mono font-bold transition-all duration-200 ${
-              authModalMode === 'register'
-                ? 'bg-violet-500 text-white shadow-md shadow-violet-500/30'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Crear Cuenta
-          </button>
-        </div>
-
-        {/* Title */}
-        <div className="text-center mb-5">
-          {authModalMode === 'login' ? (
-            <>
-              <h2 className="text-2xl font-extrabold text-white mb-1">Acceder al Dashboard</h2>
-              <p className="text-xs text-slate-400 font-mono">Ingresá con tu cuenta administradora</p>
-            </>
-          ) : (
-            <>
-              <h2 className="text-2xl font-extrabold text-white mb-1">Crear Cuenta Administradora</h2>
-              <p className="text-xs text-slate-400 font-mono">Registrate y comenzá a crear sorteos hoy</p>
-            </>
-          )}
-        </div>
-
-        {/* ─── LOGIN FORM ─── */}
-        {authModalMode === 'login' && (
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-mono text-slate-300 mb-1">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                  required
-                  className="w-full bg-[#06070A] border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-400 transition-colors"
-                />
+            <div className="space-y-2">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/80 px-3 py-1 rounded-full border border-cyan-500/30 inline-block">
+                Verificación Requerida
+              </span>
+              <h2 className="text-2xl font-extrabold text-white">
+                ¡Revisá tu Correo Electrónico!
+              </h2>
+              <p className="text-sm text-slate-300 leading-relaxed font-sans">
+                Te enviamos un enlace de confirmación a:
+              </p>
+              <div className="p-3 rounded-xl bg-slate-950 border border-cyan-500/30 font-mono text-sm text-cyan-300 font-bold break-all">
+                {registeredEmail}
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-mono text-slate-300 mb-1">Contraseña</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="w-full bg-[#06070A] border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-400 transition-colors"
-                />
+            <div className="text-left bg-slate-900/80 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs text-slate-300 font-mono">
+              <div className="flex items-start space-x-2">
+                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>Hacé click en el enlace que recibiste en tu email para activar tu cuenta.</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>Si no lo ves, revisá la carpeta de <strong>Spam</strong> o correo no deseado.</span>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-extrabold text-sm font-mono tracking-wide shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:from-cyan-400 hover:to-blue-500 transition-all flex items-center justify-center space-x-2 mt-2 disabled:opacity-60"
-            >
-              <span>{loading ? 'Autenticando...' : 'Ingresar al Dashboard'}</span>
-              <ArrowRight className="w-4 h-4 text-black" />
-            </button>
-
-            <p className="text-center text-xs text-slate-500 font-mono pt-1">
-              ¿No tenés cuenta?{' '}
+            <div className="space-y-2 pt-2">
               <button
                 type="button"
-                onClick={() => setAuthModalMode('register')}
-                className="text-violet-400 hover:text-violet-300 underline underline-offset-2 font-semibold transition-colors"
+                onClick={() => {
+                  setShowVerifyScreen(false);
+                  setAuthModalMode('login');
+                  setEmail(registeredEmail);
+                }}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-extrabold text-sm font-mono tracking-wide shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 transition-all flex items-center justify-center space-x-2"
               >
-                Crear una gratis (1 sorteo/mes)
+                <span>Ya verifiqué mi correo — Iniciar Sesión</span>
+                <ArrowRight className="w-4 h-4 text-black" />
               </button>
-            </p>
-          </form>
-        )}
 
-        {/* ─── REGISTER FORM ─── */}
-        {authModalMode === 'register' && (
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div>
-              <label className="block text-xs font-mono text-slate-300 mb-1">Nombre completo o Canal</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Tu nombre o canal"
-                  required
-                  className="w-full bg-[#06070A] border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-violet-400 transition-colors"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resending}
+                className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-mono transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{resending ? 'Reenviando correo...' : 'Reenviar correo de confirmación'}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Icon */}
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-violet-600/20 border border-cyan-500/30 flex items-center justify-center mx-auto mb-4">
+              {authModalMode === 'login'
+                ? <Lock className="w-7 h-7 text-cyan-400 animate-pulse" />
+                : <Sparkles className="w-7 h-7 text-violet-400 animate-pulse" />
+              }
             </div>
 
-            <div>
-              <label className="block text-xs font-mono text-slate-300 mb-1">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@email.com"
-                  required
-                  className="w-full bg-[#06070A] border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white font-mono focus:outline-none focus:border-violet-400 transition-colors"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-mono text-slate-300 mb-1">Contraseña</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Mín. 6 caracteres"
-                  required
-                  className="w-full bg-[#06070A] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-violet-400 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono text-slate-300 mb-1">Confirmar</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Repetir"
-                  required
-                  className="w-full bg-[#06070A] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-violet-400 transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* Plan selector */}
-            <div>
-              <label className="block text-xs font-mono text-slate-300 mb-1.5">Elegir plan</label>
-              <div className="grid grid-cols-3 gap-2">
-                {plans.map((plan) => (
-                  <button
-                    type="button"
-                    key={plan.id}
-                    onClick={() => setSelectedPlan(plan.id)}
-                    className={`p-2.5 rounded-xl border text-center transition-all ${
-                      selectedPlan === plan.id
-                        ? `${plan.color} bg-violet-950/60 border-2`
-                        : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                    }`}
-                  >
-                    <span className="text-xs font-bold text-white block">{plan.label.split(' — ')[0]}</span>
-                    <span className="text-[10px] font-mono text-slate-400 block">{plan.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-pink-600 text-white font-extrabold text-sm font-mono tracking-wide shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50 hover:from-violet-400 hover:to-pink-500 transition-all flex items-center justify-center space-x-2 mt-2 disabled:opacity-60"
-            >
-              <UserPlus className="w-4 h-4 text-white" />
-              <span>{loading ? 'Creando cuenta...' : 'Crear Cuenta y Comenzar'}</span>
-            </button>
-
-            <p className="text-center text-xs text-slate-500 font-mono pt-1">
-              ¿Ya tenés cuenta?{' '}
+            {/* Mode Switcher Tabs */}
+            <div className="flex rounded-2xl bg-slate-900/80 border border-slate-800 p-1 mb-5">
               <button
                 type="button"
                 onClick={() => setAuthModalMode('login')}
-                className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 font-semibold transition-colors"
+                className={`flex-1 py-2 rounded-xl text-xs font-mono font-bold transition-all duration-200 ${
+                  authModalMode === 'login'
+                    ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
               >
-                Iniciar sesión
+                Iniciar Sesión
               </button>
-            </p>
-          </form>
-        )}
+              <button
+                type="button"
+                onClick={() => setAuthModalMode('register')}
+                className={`flex-1 py-2 rounded-xl text-xs font-mono font-bold transition-all duration-200 ${
+                  authModalMode === 'register'
+                    ? 'bg-violet-500 text-white shadow-md shadow-violet-500/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Crear Cuenta
+              </button>
+            </div>
 
-        {/* Footer */}
-        <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-center space-x-2 text-[10px] text-slate-500 font-mono">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Protegido por Supabase Auth & Row Level Security</span>
-        </div>
+            {/* Title */}
+            <div className="text-center mb-5">
+              {authModalMode === 'login' ? (
+                <>
+                  <h2 className="text-2xl font-extrabold text-white mb-1">Acceder al Dashboard</h2>
+                  <p className="text-xs text-slate-400 font-mono">Ingresá con tu cuenta administradora</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-extrabold text-white mb-1">Crear Cuenta Administradora</h2>
+                  <p className="text-xs text-slate-400 font-mono">Registrate y comenzá a crear sorteos hoy</p>
+                </>
+              )}
+            </div>
+
+            {/* ─── LOGIN FORM ─── */}
+            {authModalMode === 'login' && (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono text-slate-300 mb-1">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="tu@email.com"
+                      required
+                      className="w-full bg-[#06070A] border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-400 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-slate-300 mb-1">Contraseña</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="w-full bg-[#06070A] border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-cyan-400 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-black font-extrabold text-sm font-mono tracking-wide shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:from-cyan-400 hover:to-blue-500 transition-all flex items-center justify-center space-x-2 mt-2 disabled:opacity-60"
+                >
+                  <span>{loading ? 'Autenticando...' : 'Ingresar al Dashboard'}</span>
+                  <ArrowRight className="w-4 h-4 text-black" />
+                </button>
+
+                <p className="text-center text-xs text-slate-500 font-mono pt-1">
+                  ¿No tenés cuenta?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setAuthModalMode('register')}
+                    className="text-violet-400 hover:text-violet-300 underline underline-offset-2 font-semibold transition-colors"
+                  >
+                    Crear una gratis (1 sorteo/mes)
+                  </button>
+                </p>
+              </form>
+            )}
+
+            {/* ─── REGISTER FORM ─── */}
+            {authModalMode === 'register' && (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono text-slate-300 mb-1">Nombre completo o Canal</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Tu nombre o canal"
+                      required
+                      className="w-full bg-[#06070A] border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-violet-400 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono text-slate-300 mb-1">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="tu@email.com"
+                      required
+                      className="w-full bg-[#06070A] border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white font-mono focus:outline-none focus:border-violet-400 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-mono text-slate-300 mb-1">Contraseña</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Mín. 6 caracteres"
+                      required
+                      className="w-full bg-[#06070A] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-violet-400 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-slate-300 mb-1">Confirmar</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repetir"
+                      required
+                      className="w-full bg-[#06070A] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono focus:outline-none focus:border-violet-400 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Plan selector */}
+                <div>
+                  <label className="block text-xs font-mono text-slate-300 mb-1.5">Elegir plan</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {plans.map((plan) => (
+                      <button
+                        type="button"
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan.id)}
+                        className={`p-2.5 rounded-xl border text-center transition-all ${
+                          selectedPlan === plan.id
+                            ? `${plan.color} bg-violet-950/60 border-2`
+                            : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                        }`}
+                      >
+                        <span className="text-xs font-bold text-white block">{plan.label.split(' — ')[0]}</span>
+                        <span className="text-[10px] font-mono text-slate-400 block">{plan.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-pink-600 text-white font-extrabold text-sm font-mono tracking-wide shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50 hover:from-violet-400 hover:to-pink-500 transition-all flex items-center justify-center space-x-2 mt-2 disabled:opacity-60"
+                >
+                  <UserPlus className="w-4 h-4 text-white" />
+                  <span>{loading ? 'Creando cuenta...' : 'Crear Cuenta y Comenzar'}</span>
+                </button>
+
+                <p className="text-center text-xs text-slate-500 font-mono pt-1">
+                  ¿Ya tenés cuenta?{' '}
+                  <button
+                    type="button"
+                    onClick={() => setAuthModalMode('login')}
+                    className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 font-semibold transition-colors"
+                  >
+                    Iniciar sesión
+                  </button>
+                </p>
+              </form>
+            )}
+
+            {/* Footer */}
+            <div className="mt-5 pt-3 border-t border-slate-800 flex items-center justify-center space-x-2 text-[10px] text-slate-500 font-mono">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Protegido por Supabase Auth & Row Level Security</span>
+            </div>
+          </>
+        )}
 
       </motion.div>
     </div>
