@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Raffle, RaffleNumber, Settings, DrawHistory, AdminProfile } from './types';
+import { Raffle, RaffleNumber, Settings, DrawHistory, AdminProfile, NumberStatus } from './types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -10,241 +10,500 @@ export const isSupabaseConfigured = Boolean(
   !supabaseUrl.includes('placeholder')
 );
 
-export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
-
-// Initial 3 Sample Admin Accounts for SaaS demo
-export const INITIAL_ADMINS: AdminProfile[] = [
-  {
-    id: '00000000-0000-0000-0000-000000000001',
-    email: 'admin1@temtech.com',
-    full_name: 'Marcelo Tech (Admin 1)',
-    role: 'admin',
-    subscription_plan: 'pro',
-    live_stream_url: 'https://www.youtube.com/embed/5qap5aO4i9A',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000002',
-    email: 'admin2@temtech.com',
-    full_name: 'Valeria Gamer (Admin 2)',
-    role: 'admin',
-    subscription_plan: 'ilimitado',
-    live_stream_url: 'https://www.youtube.com/embed/2g811Eo7K8U',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '00000000-0000-0000-0000-000000000003',
-    email: 'admin3@temtech.com',
-    full_name: 'Lucas Sorteos (Admin 3)',
-    role: 'admin',
-    subscription_plan: 'gratis',
-    live_stream_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    created_at: new Date().toISOString()
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
   }
-];
+});
 
-// Initial 3 Active Raffles from 3 different admins
-export const INITIAL_RAFFLES: Raffle[] = [
-  {
-    id: '11111111-1111-1111-1111-111111111111',
-    admin_id: '00000000-0000-0000-0000-000000000001',
-    admin_name: 'Marcelo Tech',
-    title: 'Gran Sorteo PlayStation 5 Slim 1TB',
-    description: '¡Participá por la nueva PlayStation 5 Slim 1TB con 2 controles DualSense! Transmisión en vivo oficial desde el canal del creador Marcelo Tech.',
-    prize: 'PlayStation 5 Slim 1TB + 2 Joysticks',
-    image: 'https://images.unsplash.com/photo-1606813907291-d86efa9b94db?auto=format&fit=crop&w=1000&q=80',
-    banner_image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1600&q=80',
-    price: 5000,
-    total_numbers: 100,
-    draw_date: '2026-08-25',
-    draw_time: '21:00',
-    status: 'active',
-    primary_color: '#00E5FF',
-    slug: 'ps5-slim-1tb-marcelo',
-    live_stream_url: 'https://www.youtube.com/embed/5qap5aO4i9A',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '22222222-2222-2222-2222-222222222222',
-    admin_id: '00000000-0000-0000-0000-000000000002',
-    admin_name: 'Valeria Gamer',
-    title: 'Sorteo Exclusivo iPhone 15 Pro Max 256GB',
-    description: '¡Llévate el iPhone 15 Pro Max Titán Natural nuevo en caja sellada! Sorteo en directo por Twitch y YouTube transmitido por Valeria Gamer.',
-    prize: 'iPhone 15 Pro Max 256GB',
-    image: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1000&q=80',
-    banner_image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1600&q=80',
-    price: 8500,
-    total_numbers: 100,
-    draw_date: '2026-08-28',
-    draw_time: '22:00',
-    status: 'active',
-    primary_color: '#FF0055',
-    slug: 'iphone-15-pro-max-valeria',
-    live_stream_url: 'https://www.youtube.com/embed/2g811Eo7K8U',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '33333333-3333-3333-3333-333333333333',
-    admin_id: '00000000-0000-0000-0000-000000000003',
-    admin_name: 'Lucas Sorteos',
-    title: 'Sorteo Moto Honda Wave 110cc 0km',
-    description: '¡Ganá una Moto Honda Wave 110cc 0km recién sacada de concesionaria! Transmisión en vivo comandada en directo por Lucas Sorteos VIP.',
-    prize: 'Moto Honda Wave 110cc 0km',
-    image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=1000&q=80',
-    banner_image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=1600&q=80',
-    price: 12000,
-    total_numbers: 100,
-    draw_date: '2026-09-01',
-    draw_time: '20:00',
-    status: 'active',
-    primary_color: '#10B981',
-    slug: 'honda-wave-110-lucas',
-    live_stream_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    created_at: new Date().toISOString()
+// ==========================================
+// PROFILES & AUTH HELPERS
+// ==========================================
+
+export async function getProfile(userId: string): Promise<AdminProfile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching profile:', error);
+    return null;
   }
-];
 
-export const INITIAL_SETTINGS: Settings = {
-  alias: 'marcelo.temtech.mp',
-  holder: 'Marcelo Lencina',
-  whatsapp: '5493518509827',
-  instagram: '@temtech.studio',
-  facebook: 'temtechstudio',
-  logo: 'TEMTECH Sorteos',
-  primary_color: '#00E5FF',
-  auto_message: 'Hola. Reservé el número {number}. Nombre: {name}, Apellido: {lastname}, Teléfono: {phone}. Adjunto comprobante.',
-  live_stream_url: 'https://www.youtube.com/embed/5qap5aO4i9A'
-};
+  return data as AdminProfile;
+}
 
-// Preset paid and reserved number distributions for sample raffles
-const presetPaid1 = [3, 7, 12, 18, 22, 28, 31, 35, 40, 44, 49, 53, 58, 62, 67, 71, 75, 80, 84, 89, 93, 98];
-const presetReserved1 = [5, 9, 14, 21, 33, 47, 50, 60, 66, 73, 79, 86, 91, 95, 99];
+export async function updateProfile(userId: string, updates: Partial<AdminProfile>): Promise<boolean> {
+  const { error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId);
 
-export function buildInitialNumbersForRaffle(raffleId: string): RaffleNumber[] {
-  const list: RaffleNumber[] = [];
-  for (let i = 1; i <= 100; i++) {
-    let status: 'available' | 'reserved' | 'paid' = 'available';
-    let user_name = undefined;
-    let user_lastname = undefined;
-    let phone = undefined;
+  if (error) {
+    console.error('Error updating profile:', error);
+    return false;
+  }
+  return true;
+}
 
-    if (presetPaid1.includes(i)) {
-      status = 'paid';
-      user_name = i % 2 === 0 ? 'Carlos' : 'Valeria';
-      user_lastname = i % 2 === 0 ? 'Gómez' : 'Fernández';
-      phone = '3515550199';
-    } else if (presetReserved1.includes(i)) {
-      status = 'reserved';
-      user_name = i === 14 ? 'Marcelo' : 'Lucía';
-      user_lastname = i === 14 ? 'Lencina' : 'Ríos';
-      phone = '3514440288';
-    }
+// ==========================================
+// RAFFLES HELPERS
+// ==========================================
 
-    list.push({
-      id: `num-${raffleId}-${i}`,
-      raffle_id: raffleId,
+export async function getActiveRaffles(): Promise<Raffle[]> {
+  const { data, error } = await supabase
+    .from('raffles')
+    .select(`
+      *,
+      profiles:admin_id (full_name)
+    `)
+    .in('status', ['active', 'finished'])
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    console.error('Error fetching active raffles:', error);
+    return [];
+  }
+
+  return data.map((item: any) => ({
+    id: item.id,
+    admin_id: item.admin_id,
+    admin_name: item.profiles?.full_name || 'Organizador',
+    title: item.title,
+    description: item.description,
+    prize: item.prize,
+    image: item.image,
+    banner_image: item.banner_image,
+    price: Number(item.price),
+    total_numbers: item.total_numbers,
+    draw_date: item.draw_date,
+    draw_time: item.draw_time?.slice(0, 5) || '21:00',
+    status: item.status,
+    primary_color: item.primary_color || '#00E5FF',
+    slug: item.slug,
+    live_stream_url: item.live_stream_url || '',
+    created_at: item.created_at
+  }));
+}
+
+export async function getRaffleById(id: string): Promise<Raffle | null> {
+  const { data, error } = await supabase
+    .from('raffles')
+    .select(`
+      *,
+      profiles:admin_id (full_name)
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error || !data) {
+    console.error('Error fetching raffle by id:', error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    admin_id: data.admin_id,
+    admin_name: data.profiles?.full_name || 'Organizador',
+    title: data.title,
+    description: data.description,
+    prize: data.prize,
+    image: data.image,
+    banner_image: data.banner_image,
+    price: Number(data.price),
+    total_numbers: data.total_numbers,
+    draw_date: data.draw_date,
+    draw_time: data.draw_time?.slice(0, 5) || '21:00',
+    status: data.status,
+    primary_color: data.primary_color || '#00E5FF',
+    slug: data.slug,
+    live_stream_url: data.live_stream_url || '',
+    created_at: data.created_at
+  };
+}
+
+export async function getAdminRaffles(adminId: string): Promise<Raffle[]> {
+  const { data, error } = await supabase
+    .from('raffles')
+    .select(`
+      *,
+      profiles:admin_id (full_name)
+    `)
+    .eq('admin_id', adminId)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    console.error('Error fetching admin raffles:', error);
+    return [];
+  }
+
+  return data.map((item: any) => ({
+    id: item.id,
+    admin_id: item.admin_id,
+    admin_name: item.profiles?.full_name || 'Organizador',
+    title: item.title,
+    description: item.description,
+    prize: item.prize,
+    image: item.image,
+    banner_image: item.banner_image,
+    price: Number(item.price),
+    total_numbers: item.total_numbers,
+    draw_date: item.draw_date,
+    draw_time: item.draw_time?.slice(0, 5) || '21:00',
+    status: item.status,
+    primary_color: item.primary_color || '#00E5FF',
+    slug: item.slug,
+    live_stream_url: item.live_stream_url || '',
+    created_at: item.created_at
+  }));
+}
+
+export async function checkCanCreateRaffle(adminId: string, subscriptionPlan: string): Promise<{ canCreate: boolean; message?: string }> {
+  if (subscriptionPlan === 'ilimitado') {
+    return { canCreate: true };
+  }
+
+  const now = new Date();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const { data, error } = await supabase
+    .from('raffles')
+    .select('id, created_at')
+    .eq('admin_id', adminId)
+    .gte('created_at', firstDayOfMonth);
+
+  if (error) {
+    console.error('Error checking raffle limit:', error);
+    return { canCreate: true };
+  }
+
+  const monthlyCount = data ? data.length : 0;
+
+  if (subscriptionPlan === 'gratis' && monthlyCount >= 1) {
+    return {
+      canCreate: false,
+      message: 'Has alcanzado el límite de 1 sorteo mensual para el plan Gratis. Actualiza a Pro o Ilimitado para crear más.'
+    };
+  }
+
+  if (subscriptionPlan === 'pro' && monthlyCount >= 5) {
+    return {
+      canCreate: false,
+      message: 'Has alcanzado el límite de 5 sorteos mensuales para el plan Pro. Actualiza al plan Ilimitado.'
+    };
+  }
+
+  return { canCreate: true };
+}
+
+export async function createRaffle(raffleData: Omit<Raffle, 'id' | 'created_at'>): Promise<Raffle | null> {
+  const { data, error } = await supabase
+    .from('raffles')
+    .insert({
+      admin_id: raffleData.admin_id,
+      title: raffleData.title,
+      description: raffleData.description,
+      prize: raffleData.prize,
+      image: raffleData.image,
+      banner_image: raffleData.banner_image,
+      price: raffleData.price,
+      total_numbers: raffleData.total_numbers,
+      draw_date: raffleData.draw_date,
+      draw_time: raffleData.draw_time,
+      status: raffleData.status,
+      primary_color: raffleData.primary_color,
+      slug: raffleData.slug,
+      live_stream_url: raffleData.live_stream_url || '',
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    console.error('Error creating raffle:', error);
+    return null;
+  }
+
+  // Generate numbers for this raffle
+  const total = Number(raffleData.total_numbers) || 100;
+  const numbersBatch = [];
+  for (let i = 1; i <= total; i++) {
+    numbersBatch.push({
+      raffle_id: data.id,
       number: i,
-      status,
-      user_name,
-      user_lastname,
-      phone,
-      reserved_at: status !== 'available' ? new Date().toISOString() : undefined,
-      paid_at: status === 'paid' ? new Date().toISOString() : undefined,
+      status: 'available',
     });
   }
-  return list;
-}
 
-// LocalStorage Persistence Wrapper for Mock Mode
-const LOCAL_STORAGE_KEY_RAFFLES = 'temtech_saas_raffles_v2';
-const LOCAL_STORAGE_KEY_SETTINGS = 'temtech_saas_settings_v2';
-const LOCAL_STORAGE_KEY_NUMBERS_PREFIX = 'temtech_saas_numbers_';
-const LOCAL_STORAGE_KEY_HISTORY = 'temtech_saas_history_v2';
-const LOCAL_STORAGE_KEY_ACTIVE_ADMIN = 'temtech_saas_active_admin_v2';
+  const { error: numbersError } = await supabase
+    .from('raffle_numbers')
+    .insert(numbersBatch);
 
-export function getMockRaffles(): Raffle[] {
-  if (typeof window === 'undefined') return INITIAL_RAFFLES;
-  const saved = localStorage.getItem(LOCAL_STORAGE_KEY_RAFFLES);
-  return saved ? JSON.parse(saved) : INITIAL_RAFFLES;
-}
-
-export function saveMockRaffles(raffles: Raffle[]): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_STORAGE_KEY_RAFFLES, JSON.stringify(raffles));
-    window.dispatchEvent(new Event('raffles-updated'));
+  if (numbersError) {
+    console.error('Error generating raffle numbers in batch:', numbersError);
   }
+
+  return {
+    id: data.id,
+    admin_id: data.admin_id,
+    admin_name: raffleData.admin_name,
+    title: data.title,
+    description: data.description,
+    prize: data.prize,
+    image: data.image,
+    banner_image: data.banner_image,
+    price: Number(data.price),
+    total_numbers: data.total_numbers,
+    draw_date: data.draw_date,
+    draw_time: data.draw_time?.slice(0, 5) || '21:00',
+    status: data.status,
+    primary_color: data.primary_color,
+    slug: data.slug,
+    live_stream_url: data.live_stream_url,
+    created_at: data.created_at
+  };
 }
 
-export function getMockRaffle(): Raffle {
-  const list = getMockRaffles();
-  return list[0] || INITIAL_RAFFLES[0];
+export async function updateRaffle(id: string, updates: Partial<Raffle>): Promise<boolean> {
+  const { error } = await supabase
+    .from('raffles')
+    .update({
+      title: updates.title,
+      description: updates.description,
+      prize: updates.prize,
+      image: updates.image,
+      banner_image: updates.banner_image,
+      price: updates.price,
+      draw_date: updates.draw_date,
+      draw_time: updates.draw_time,
+      status: updates.status,
+      primary_color: updates.primary_color,
+      live_stream_url: updates.live_stream_url,
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error updating raffle:', error);
+    return false;
+  }
+  return true;
 }
 
-export function saveMockRaffle(raffle: Raffle): void {
-  const list = getMockRaffles();
-  const index = list.findIndex(r => r.id === raffle.id);
-  if (index >= 0) {
-    list[index] = raffle;
+export async function deleteRaffle(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('raffles')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting raffle:', error);
+    return false;
+  }
+  return true;
+}
+
+// ==========================================
+// RAFFLE NUMBERS HELPERS
+// ==========================================
+
+export async function getRaffleNumbers(raffleId: string): Promise<RaffleNumber[]> {
+  const { data, error } = await supabase
+    .from('raffle_numbers')
+    .select('*')
+    .eq('raffle_id', raffleId)
+    .order('number', { ascending: true });
+
+  if (error || !data) {
+    console.error('Error fetching raffle numbers:', error);
+    return [];
+  }
+
+  return data as RaffleNumber[];
+}
+
+export async function reserveNumber(
+  raffleId: string, 
+  number: number, 
+  userData: { name: string; lastname: string; phone: string }
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('raffle_numbers')
+    .update({
+      status: 'reserved',
+      user_name: userData.name,
+      user_lastname: userData.lastname,
+      phone: userData.phone,
+      reserved_at: new Date().toISOString()
+    })
+    .eq('raffle_id', raffleId)
+    .eq('number', number)
+    .eq('status', 'available')
+    .select();
+
+  if (error || !data || data.length === 0) {
+    console.error('Error reserving number or already taken:', error);
+    return false;
+  }
+  return true;
+}
+
+export async function updateNumberStatus(
+  raffleId: string,
+  number: number,
+  status: NumberStatus,
+  userData?: { name?: string; lastname?: string; phone?: string }
+): Promise<boolean> {
+  const updatePayload: any = {
+    status,
+  };
+
+  if (status === 'available') {
+    updatePayload.user_name = null;
+    updatePayload.user_lastname = null;
+    updatePayload.phone = null;
+    updatePayload.reserved_at = null;
+    updatePayload.paid_at = null;
   } else {
-    list.push(raffle);
+    if (userData?.name !== undefined) updatePayload.user_name = userData.name;
+    if (userData?.lastname !== undefined) updatePayload.user_lastname = userData.lastname;
+    if (userData?.phone !== undefined) updatePayload.phone = userData.phone;
+    if (status === 'paid') updatePayload.paid_at = new Date().toISOString();
+    if (status === 'reserved') updatePayload.reserved_at = new Date().toISOString();
   }
-  saveMockRaffles(list);
-}
 
-export function getMockNumbers(raffleId: string = INITIAL_RAFFLES[0].id): RaffleNumber[] {
-  if (typeof window === 'undefined') return buildInitialNumbersForRaffle(raffleId);
-  const saved = localStorage.getItem(`${LOCAL_STORAGE_KEY_NUMBERS_PREFIX}${raffleId}`);
-  if (saved) return JSON.parse(saved);
-  const initial = buildInitialNumbersForRaffle(raffleId);
-  localStorage.setItem(`${LOCAL_STORAGE_KEY_NUMBERS_PREFIX}${raffleId}`, JSON.stringify(initial));
-  return initial;
-}
+  const { error } = await supabase
+    .from('raffle_numbers')
+    .update(updatePayload)
+    .eq('raffle_id', raffleId)
+    .eq('number', number);
 
-export function saveMockNumbers(numbers: RaffleNumber[], raffleId: string = INITIAL_RAFFLES[0].id): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(`${LOCAL_STORAGE_KEY_NUMBERS_PREFIX}${raffleId}`, JSON.stringify(numbers));
-    window.dispatchEvent(new Event('raffle-numbers-updated'));
+  if (error) {
+    console.error('Error updating number status:', error);
+    return false;
   }
+  return true;
 }
 
-export function getMockSettings(): Settings {
-  if (typeof window === 'undefined') return INITIAL_SETTINGS;
-  const saved = localStorage.getItem(LOCAL_STORAGE_KEY_SETTINGS);
-  return saved ? JSON.parse(saved) : INITIAL_SETTINGS;
-}
+// ==========================================
+// SETTINGS HELPERS
+// ==========================================
 
-export function saveMockSettings(settings: Settings): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_STORAGE_KEY_SETTINGS, JSON.stringify(settings));
-    window.dispatchEvent(new Event('settings-updated'));
+export async function getSettingsByUserId(userId: string): Promise<Settings | null> {
+  const { data, error } = await supabase
+    .from('settings')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error || !data) {
+    return null;
   }
+
+  return {
+    alias: data.alias || '',
+    holder: data.holder || '',
+    whatsapp: data.whatsapp || '',
+    instagram: data.instagram || '',
+    facebook: data.facebook || '',
+    logo: data.logo || 'TEMTECH Sorteos',
+    primary_color: data.primary_color || '#00E5FF',
+    auto_message: data.auto_message || 'Hola. Reservé el número {number}. Adjunto comprobante.',
+    live_stream_url: data.live_stream_url || ''
+  };
 }
 
-export function getActiveAdmin(): AdminProfile {
-  if (typeof window === 'undefined') return INITIAL_ADMINS[0];
-  const saved = localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVE_ADMIN);
-  return saved ? JSON.parse(saved) : INITIAL_ADMINS[0];
+export async function getSettingsByRaffleAdmin(raffleId: string): Promise<Settings | null> {
+  const { data: raffle, error: rError } = await supabase
+    .from('raffles')
+    .select('admin_id')
+    .eq('id', raffleId)
+    .single();
+
+  if (rError || !raffle) return null;
+  return getSettingsByUserId(raffle.admin_id);
 }
 
-export function setActiveAdmin(admin: AdminProfile): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(LOCAL_STORAGE_KEY_ACTIVE_ADMIN, JSON.stringify(admin));
-    window.dispatchEvent(new Event('active-admin-changed'));
+export async function saveSettings(userId: string, settingsData: Settings): Promise<boolean> {
+  const { error } = await supabase
+    .from('settings')
+    .upsert({
+      user_id: userId,
+      alias: settingsData.alias,
+      holder: settingsData.holder,
+      whatsapp: settingsData.whatsapp,
+      instagram: settingsData.instagram,
+      facebook: settingsData.facebook,
+      logo: settingsData.logo,
+      primary_color: settingsData.primary_color,
+      auto_message: settingsData.auto_message,
+      live_stream_url: settingsData.live_stream_url,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+
+  if (error) {
+    console.error('Error saving settings:', error);
+    return false;
   }
+  return true;
 }
 
-export function getMockHistory(): DrawHistory[] {
-  if (typeof window === 'undefined') return [];
-  const saved = localStorage.getItem(LOCAL_STORAGE_KEY_HISTORY);
-  return saved ? JSON.parse(saved) : [];
-}
+// ==========================================
+// DRAW HISTORY & WINNER
+// ==========================================
 
-export function saveMockWinnerHistory(record: DrawHistory): void {
-  if (typeof window !== 'undefined') {
-    const list = getMockHistory();
-    list.unshift(record);
-    localStorage.setItem(LOCAL_STORAGE_KEY_HISTORY, JSON.stringify(list));
+export async function getDrawHistory(raffleId: string): Promise<DrawHistory[]> {
+  const { data, error } = await supabase
+    .from('draw_history')
+    .select('*')
+    .eq('raffle_id', raffleId)
+    .order('draw_date', { ascending: false });
+
+  if (error || !data) {
+    return [];
   }
+
+  return data as DrawHistory[];
+}
+
+export async function recordDrawWinner(
+  raffleId: string, 
+  winnerNumber: number, 
+  winnerName: string, 
+  videoUrl?: string
+): Promise<DrawHistory | null> {
+  // 1. Insert in draw_history
+  const { data, error } = await supabase
+    .from('draw_history')
+    .insert({
+      raffle_id: raffleId,
+      winner_number: winnerNumber,
+      winner_name: winnerName,
+      draw_date: new Date().toISOString(),
+      video_url: videoUrl || ''
+    })
+    .select()
+    .single();
+
+  if (error || !data) {
+    console.error('Error inserting draw winner:', error);
+    return null;
+  }
+
+  // 2. Mark raffle as finished
+  await supabase
+    .from('raffles')
+    .update({ status: 'finished' })
+    .eq('id', raffleId);
+
+  // 3. Mark number as winner
+  await supabase
+    .from('raffle_numbers')
+    .update({ status: 'winner' })
+    .eq('raffle_id', raffleId)
+    .eq('number', winnerNumber);
+
+  return data as DrawHistory;
 }

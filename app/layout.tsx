@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Outfit } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import Header from '@/components/Header';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -22,11 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className="dark">
+    <html lang="es" className={`dark ${inter.variable}`}>
       <body className="bg-[#06070A] text-slate-100 min-h-screen flex flex-col cyber-grid-bg selection:bg-cyan-500 selection:text-black">
         <Header />
         <main className="flex-grow">
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </main>
         
         {/* Footer */}

@@ -1,19 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, CheckCircle, XCircle, Edit3, MessageCircle, Send } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Edit3, MessageCircle, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { RaffleNumber, NumberStatus } from '@/lib/types';
+import { updateNumberStatus, getRaffleNumbers } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 
 export default function NumbersTable() {
-  const { numbers, updateNumberStatus, settings } = useAppStore();
+  const { numbers, setNumbers, activeRaffle } = useAppStore();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'all' | NumberStatus>('all');
   const [editingTicket, setEditingTicket] = useState<RaffleNumber | null>(null);
   const [editName, setEditName] = useState('');
   const [editLastname, setEditLastname] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const refreshNumbers = async () => {
+    if (!activeRaffle.id) return;
+    const data = await getRaffleNumbers(activeRaffle.id);
+    setNumbers(data);
+  };
 
   const filtered = numbers.filter(n => {
     if (filter !== 'all' && n.status !== filter) return false;
@@ -26,14 +34,30 @@ export default function NumbersTable() {
     return true;
   });
 
-  const handleConfirmPayment = (ticket: RaffleNumber) => {
-    updateNumberStatus(ticket.number, 'paid');
-    toast.success(`¡Pago verificado! El número #${String(ticket.number).padStart(2, '0')} ahora figura como VENDIDO.`);
+  const handleConfirmPayment = async (ticket: RaffleNumber) => {
+    if (!activeRaffle.id) return;
+    setActionLoading(true);
+    const ok = await updateNumberStatus(activeRaffle.id, ticket.number, 'paid');
+    if (ok) {
+      toast.success(`¡Pago verificado! El número #${String(ticket.number).padStart(2, '0')} ahora figura como VENDIDO.`);
+      await refreshNumbers();
+    } else {
+      toast.error('Error al confirmar pago en Supabase.');
+    }
+    setActionLoading(false);
   };
 
-  const handleCancelReservation = (ticket: RaffleNumber) => {
-    updateNumberStatus(ticket.number, 'available', { name: '', lastname: '', phone: '' });
-    toast.info(`Reserva cancelada. El número #${String(ticket.number).padStart(2, '0')} volvió a estar DISPONIBLE.`);
+  const handleCancelReservation = async (ticket: RaffleNumber) => {
+    if (!activeRaffle.id) return;
+    setActionLoading(true);
+    const ok = await updateNumberStatus(activeRaffle.id, ticket.number, 'available');
+    if (ok) {
+      toast.info(`Reserva cancelada. El número #${String(ticket.number).padStart(2, '0')} volvió a estar DISPONIBLE.`);
+      await refreshNumbers();
+    } else {
+      toast.error('Error al cancelar reserva en Supabase.');
+    }
+    setActionLoading(false);
   };
 
   const handleOpenEdit = (ticket: RaffleNumber) => {
@@ -43,16 +67,23 @@ export default function NumbersTable() {
     setEditPhone(ticket.phone || '');
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTicket) return;
-    updateNumberStatus(editingTicket.number, editingTicket.status, {
+    if (!editingTicket || !activeRaffle.id) return;
+    setActionLoading(true);
+    const ok = await updateNumberStatus(activeRaffle.id, editingTicket.number, editingTicket.status, {
       name: editName,
       lastname: editLastname,
       phone: editPhone,
     });
-    toast.success('Datos del participante actualizados correctamente.');
-    setEditingTicket(null);
+    if (ok) {
+      toast.success('Datos del participante actualizados correctamente en Supabase.');
+      await refreshNumbers();
+      setEditingTicket(null);
+    } else {
+      toast.error('Error al actualizar datos en Supabase.');
+    }
+    setActionLoading(false);
   };
 
   const handleSendWhatsapp = (ticket: RaffleNumber) => {
@@ -61,7 +92,7 @@ export default function NumbersTable() {
       return;
     }
     const cleanPhone = ticket.phone.replace(/\D/g, '');
-    const text = `Hola ${ticket.user_name || ''}, te contactamos de TEMTECH Sorteos sobre tu número #${String(ticket.number).padStart(2, '0')}.`;
+    const text = `Hola ${ticket.user_name || ''}, te contactamos de TEMTECH Sorteos sobre tu número #${String(ticket.number).padStart(2, '0')} para el sorteo "${activeRaffle.title}".`;
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -71,21 +102,32 @@ export default function NumbersTable() {
       {/* Header controls */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-xl font-extrabold text-white">Gestión de Números</h3>
-          <p className="text-xs text-slate-400 font-mono">Confirmá pagos y administrá las reservas en tiempo real.</p>
+          <h3 className="text-xl font-extrabold text-white">Gestión de Números del Sorteo</h3>
+          <p className="text-xs text-slate-400 font-mono">Confirmá pagos y administrá las reservas en Supabase.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Refresh button */}
+          <button
+            onClick={refreshNumbers}
+            disabled={actionLoading}
+            className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-cyan-400 transition-colors"
+            title="Recargar números"
+          >
+            <RefreshCw className={`w-4 h-4 ${actionLoading ? 'animate-spin' : ''}`} />
+          </button>
+
           {/* Status Filter */}
           <select
             value={filter}
-            onChange={(e) => setFilter(e.target.value as any)}
+            onChange={(e) => setFilter(e.target.value as 'all' | NumberStatus)}
             className="bg-[#06070A] border border-cyan-500/30 rounded-xl px-3 py-2 text-xs text-cyan-300 font-mono focus:outline-none"
           >
             <option value="all">Todos los estados</option>
             <option value="available">Disponibles</option>
             <option value="reserved">Reservados</option>
             <option value="paid">Pagados</option>
+            <option value="winner">Ganador</option>
           </select>
 
           {/* Search Input */}
@@ -118,7 +160,7 @@ export default function NumbersTable() {
             {filtered.map((ticket) => {
               const formattedNum = String(ticket.number).padStart(2, '0');
               return (
-                <tr key={ticket.id} className="hover:bg-slate-900/40 transition-colors">
+                <tr key={ticket.id || ticket.number} className="hover:bg-slate-900/40 transition-colors">
                   <td className="p-3 font-bold text-cyan-300">
                     #{formattedNum}
                   </td>
@@ -158,9 +200,10 @@ export default function NumbersTable() {
                     <div className="flex items-center justify-end space-x-2">
                       
                       {/* Confirm payment */}
-                      {ticket.status !== 'paid' && (
+                      {ticket.status !== 'paid' && ticket.status !== 'winner' && (
                         <button
                           onClick={() => handleConfirmPayment(ticket)}
+                          disabled={actionLoading}
                           className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 transition-colors flex items-center space-x-1"
                           title="Confirmar Pago"
                         >
@@ -173,8 +216,9 @@ export default function NumbersTable() {
                       {ticket.status !== 'available' && (
                         <button
                           onClick={() => handleCancelReservation(ticket)}
+                          disabled={actionLoading}
                           className="px-2 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/30 text-red-400 border border-red-500/30 transition-colors"
-                          title="Cancelar Reserva"
+                          title="Cancelar Reserva / Liberar Número"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
@@ -258,6 +302,7 @@ export default function NumbersTable() {
                 </button>
                 <button
                   type="submit"
+                  disabled={actionLoading}
                   className="px-4 py-2 rounded-xl bg-cyan-500 text-black font-extrabold text-xs font-mono"
                 >
                   Guardar Cambios

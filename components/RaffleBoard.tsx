@@ -1,10 +1,9 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Search, Filter, RefreshCw, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { Search, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { RaffleNumber, NumberStatus } from '@/lib/types';
+import { RaffleNumber } from '@/lib/types';
 import NumberCard from './NumberCard';
 
 interface RaffleBoardProps {
@@ -15,7 +14,6 @@ export default function RaffleBoard({ onSelectReservation }: RaffleBoardProps) {
   const { 
     numbers, 
     raffle, 
-    settings, 
     filterStatus, 
     setFilterStatus, 
     searchQuery, 

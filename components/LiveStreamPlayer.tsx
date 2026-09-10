@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Tv, Settings, Radio, Check, Edit3 } from 'lucide-react';
+import { Tv, Radio, Check, Edit3 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { toast } from 'sonner';
 

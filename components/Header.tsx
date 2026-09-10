@@ -1,25 +1,88 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, LayoutDashboard, LogIn, LogOut, Menu, X, ChevronDown } from 'lucide-react';
+import { Sparkles, LayoutDashboard, LogIn, LogOut, Menu, X } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { supabase, getProfile } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export default function Header() {
-  const { isAdminLoggedIn, setAdminLoggedIn, activeAdmin } = useAppStore();
+  const { 
+    isAdminLoggedIn, 
+    setAdminLoggedIn, 
+    activeAdmin, 
+    setActiveAdminProfile 
+  } = useAppStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
-  const handleLogout = () => {
-    setAdminLoggedIn(false);
-    toast.success('Sesión cerrada correctamente.');
-    router.push('/');
+  // Initialize auth listener with Supabase
+  useEffect(() => {
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setAdminLoggedIn(true);
+        getProfile(session.user.id).then((prof) => {
+          if (prof) {
+            setActiveAdminProfile(prof);
+          } else {
+            setActiveAdminProfile({
+              id: session.user.id,
+              email: session.user.email || '',
+              full_name: session.user.user_metadata?.full_name || 'Administrador',
+              role: 'admin',
+              subscription_plan: 'gratis',
+              live_stream_url: '',
+            });
+          }
+        });
+      } else {
+        setAdminLoggedIn(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setAdminLoggedIn(true);
+        const prof = await getProfile(session.user.id);
+        if (prof) {
+          setActiveAdminProfile(prof);
+        } else {
+          setActiveAdminProfile({
+            id: session.user.id,
+            email: session.user.email || '',
+            full_name: session.user.user_metadata?.full_name || 'Administrador',
+            role: 'admin',
+            subscription_plan: 'gratis',
+            live_stream_url: '',
+          });
+        }
+      } else {
+        setAdminLoggedIn(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [setAdminLoggedIn, setActiveAdminProfile]);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setAdminLoggedIn(false);
+      toast.success('Sesión cerrada correctamente.');
+      router.push('/');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 backdrop-blur-xl bg-black/50">
+    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 backdrop-blur-xl bg-black/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
 
         {/* Brand / Logo */}
@@ -44,15 +107,15 @@ export default function Header() {
           <Link href="/" className="hover:text-cyan-400 transition-colors">
             Inicio
           </Link>
-          <a href="/#sorteos-activos" className="hover:text-cyan-400 transition-colors">
+          <Link href="/#sorteos-activos" className="hover:text-cyan-400 transition-colors">
             Sorteos Activos
-          </a>
-          <a href="/#ventajas" className="hover:text-cyan-400 transition-colors">
+          </Link>
+          <Link href="/#ventajas" className="hover:text-cyan-400 transition-colors">
             Ventajas
-          </a>
-          <a href="/#planes" className="hover:text-cyan-400 transition-colors">
+          </Link>
+          <Link href="/#planes" className="hover:text-cyan-400 transition-colors">
             Planes
-          </a>
+          </Link>
         </nav>
 
         {/* Right-side CTA */}
@@ -64,7 +127,7 @@ export default function Header() {
               {/* Admin pill badge */}
               <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-xs font-mono text-emerald-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="max-w-[120px] truncate">{activeAdmin.full_name.split(' ')[0]}</span>
+                <span className="max-w-[120px] truncate">{activeAdmin.full_name?.split(' ')[0] || 'Admin'}</span>
               </div>
 
               {/* Dashboard Button */}
@@ -128,27 +191,27 @@ export default function Header() {
           >
             Inicio
           </Link>
-          <a
+          <Link
             href="/#sorteos-activos"
             onClick={() => setMobileMenuOpen(false)}
             className="block text-slate-200 font-semibold text-sm py-2.5 px-3 rounded-xl hover:bg-slate-800/60 hover:text-cyan-400 transition-all"
           >
             Sorteos Activos
-          </a>
-          <a
+          </Link>
+          <Link
             href="/#ventajas"
             onClick={() => setMobileMenuOpen(false)}
             className="block text-slate-200 font-semibold text-sm py-2.5 px-3 rounded-xl hover:bg-slate-800/60 hover:text-cyan-400 transition-all"
           >
             Ventajas
-          </a>
-          <a
+          </Link>
+          <Link
             href="/#planes"
             onClick={() => setMobileMenuOpen(false)}
             className="block text-slate-200 font-semibold text-sm py-2.5 px-3 rounded-xl hover:bg-slate-800/60 hover:text-cyan-400 transition-all"
           >
             Planes
-          </a>
+          </Link>
 
           <div className="pt-2 border-t border-slate-800 space-y-2">
             {isAdminLoggedIn ? (

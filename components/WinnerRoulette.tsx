@@ -3,10 +3,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { Trophy, Play, RefreshCcw, ShieldCheck, Lock, Sparkles } from 'lucide-react';
+import { Trophy, Play, RefreshCcw, Lock } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { RaffleNumber, DrawHistory } from '@/lib/types';
-import { saveMockWinnerHistory } from '@/lib/supabaseClient';
+import { RaffleNumber } from '@/lib/types';
+import { recordDrawWinner } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 
 interface WinnerRouletteProps {
@@ -14,7 +14,7 @@ interface WinnerRouletteProps {
 }
 
 export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) {
-  const { numbers, activeRaffle, updateNumberStatus } = useAppStore();
+  const { numbers, activeRaffle, setNumbers } = useAppStore();
   const [isSpinning, setIsSpinning] = useState(false);
   const [currentDisplayNum, setCurrentDisplayNum] = useState<number | null>(null);
   const [winner, setWinner] = useState<RaffleNumber | null>(null);
@@ -25,30 +25,11 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
   const poolToUse = eligibleTickets.length > 0 ? eligibleTickets : numbers;
 
   const triggerWinnerExplosion = () => {
-    const count = 250;
-    const defaults = { origin: { y: 0.6 } };
-
-    function fire(particleRatio: number, opts: confetti.Options) {
-      confetti({
-        ...defaults,
-        ...opts,
-        particleCount: Math.floor(count * particleRatio)
-      });
-    }
-
-    fire(0.25, {
-      spread: 26,
-      startVelocity: 55,
-      colors: ['#00E5FF', '#3B82F6', '#7C3AED']
-    });
-    fire(0.2, {
-      spread: 60,
-      colors: ['#10B981', '#F59E0B', '#EF4444']
-    });
-    fire(0.35, {
-      spread: 100,
-      decay: 0.91,
-      scalar: 0.8
+    confetti({
+      origin: { y: 0.6 },
+      particleCount: 200,
+      spread: 70,
+      colors: ['#00E5FF', '#3B82F6', '#7C3AED', '#10B981', '#F59E0B']
     });
   };
 
@@ -70,42 +51,41 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
     // Pick random winner from pool
     const selectedWinner = poolToUse[Math.floor(Math.random() * poolToUse.length)];
 
-    let speed = 50;
     let elapsed = 0;
-    const totalDuration = 6000;
+    const totalDuration = 5000;
+    let currentDelay = 50;
 
-    const spinInterval = setInterval(() => {
-      elapsed += speed;
+    const spinStep = async () => {
+      elapsed += currentDelay;
       const randomTempNum = poolToUse[Math.floor(Math.random() * poolToUse.length)].number;
       setCurrentDisplayNum(randomTempNum);
 
       if (elapsed > totalDuration - 2000) {
-        speed += 30;
+        currentDelay += 30;
       }
 
       if (elapsed >= totalDuration) {
-        clearInterval(spinInterval);
         setIsSpinning(false);
         setCurrentDisplayNum(selectedWinner.number);
         setWinner(selectedWinner);
         setShowWinnerModal(true);
         triggerWinnerExplosion();
 
-        // Mark winner in store
-        updateNumberStatus(selectedWinner.number, 'winner');
-
-        // Save to draw history
-        const record: DrawHistory = {
-          id: `draw-${Date.now()}`,
-          raffle_id: activeRaffle.id,
-          winner_number: selectedWinner.number,
-          winner_name: `${selectedWinner.user_name || 'Participante'} ${selectedWinner.user_lastname || ''}`.trim(),
-          draw_date: new Date().toISOString(),
-          video_url: activeRaffle.live_stream_url || '',
-        };
-        saveMockWinnerHistory(record);
+        // Save to Supabase
+        const winnerName = `${selectedWinner.user_name || 'Participante'} ${selectedWinner.user_lastname || ''}`.trim();
+        await recordDrawWinner(
+          activeRaffle.id,
+          selectedWinner.number,
+          winnerName,
+          activeRaffle.live_stream_url
+        );
+        return;
       }
-    }, speed);
+
+      setTimeout(spinStep, currentDelay);
+    };
+
+    setTimeout(spinStep, currentDelay);
   };
 
   const formattedDisplay = currentDisplayNum !== null 
@@ -118,13 +98,9 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
 
   return (
     <div className="w-full glass-panel-glow rounded-3xl p-6 border-2 border-cyan-400/50 shadow-2xl shadow-cyan-500/30 text-center relative overflow-hidden my-6">
-      
-      {/* Glow ambient lights */}
       <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center">
-        
-        {/* Badge */}
         <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/40 text-cyan-300 font-mono text-xs mb-4">
           <Trophy className="w-4 h-4 text-yellow-400 animate-bounce" />
           <span>ESTUDIO EN VIVO — RULETA DE NÚMEROS</span>
@@ -139,12 +115,9 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
             : 'Solo el administrador creador del sorteo puede ejecutar el sorteo de números en vivo.'}
         </p>
 
-        {/* Slot Machine Display Frame */}
         <div className="relative w-64 h-36 sm:w-80 sm:h-44 rounded-3xl glass-panel border-4 border-cyan-400/60 flex items-center justify-center shadow-2xl shadow-cyan-500/40 my-4 bg-slate-950 overflow-hidden group">
-          
           <div className="scanline-effect absolute inset-0 pointer-events-none" />
 
-          {/* Number Display */}
           <motion.div
             key={currentDisplayNum}
             initial={isSpinning ? { y: -50, opacity: 0 } : { scale: 0.9 }}
@@ -156,11 +129,8 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
               {formattedDisplay}
             </span>
           </motion.div>
-
-          <div className="absolute inset-0 border-2 border-cyan-500/30 rounded-3xl pointer-events-none" />
         </div>
 
-        {/* Action / Trigger Button */}
         <div className="mt-4">
           {isAdmin ? (
             <button
@@ -191,10 +161,8 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
             </div>
           )}
         </div>
-
       </div>
 
-      {/* WINNER MODAL */}
       <AnimatePresence>
         {showWinnerModal && winner && (
           <motion.div
@@ -204,11 +172,7 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-lg"
           >
             <div className="relative w-full max-w-lg glass-panel-glow rounded-3xl p-8 border-4 border-yellow-400/80 shadow-2xl shadow-yellow-500/50 text-center overflow-hidden">
-              
-              <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-80 bg-yellow-400/30 rounded-full blur-3xl pointer-events-none" />
-
               <div className="relative z-10 flex flex-col items-center space-y-4">
-                
                 <div className="w-20 h-20 rounded-full bg-yellow-400/20 border-2 border-yellow-400 flex items-center justify-center shadow-xl shadow-yellow-500/30 animate-bounce">
                   <Trophy className="w-10 h-10 text-yellow-300" />
                 </div>
@@ -230,15 +194,9 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-xs text-slate-400 font-mono">ORGANIZADOR: {activeRaffle.admin_name || 'Admin'}</span>
                   <h3 className="text-2xl font-extrabold text-emerald-400 text-glow-green">
                     {winner.user_name || 'Participante'} {winner.user_lastname || ''}
                   </h3>
-                  {winner.phone && (
-                    <p className="text-xs text-slate-400 font-mono">
-                      Teléfono: {winner.phone}
-                    </p>
-                  )}
                 </div>
 
                 <button
@@ -247,14 +205,11 @@ export default function WinnerRoulette({ isAdmin = true }: WinnerRouletteProps) 
                 >
                   Cerrar Ventana
                 </button>
-
               </div>
-
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
