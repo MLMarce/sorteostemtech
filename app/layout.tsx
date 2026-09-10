@@ -24,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`dark ${inter.variable}`}>
-      <body className="bg-[#06070A] text-slate-100 min-h-screen flex flex-col cyber-grid-bg selection:bg-cyan-500 selection:text-black">
+    <html lang="es" className={`dark ${inter.variable}`} suppressHydrationWarning>
+      <body className="bg-[#06070A] text-slate-100 min-h-screen flex flex-col cyber-grid-bg selection:bg-cyan-500 selection:text-black" suppressHydrationWarning>
         <Header />
         <main className="flex-grow">
           <ErrorBoundary>
