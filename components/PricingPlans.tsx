@@ -1,13 +1,16 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Check, Sparkles, ArrowRight } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
 
 export default function PricingPlans() {
+  const { openAuthModal } = useAppStore();
+
   const plans = [
     {
+      id: 'gratis',
       name: 'Gratis',
       price: '$0',
       period: '/ mes',
@@ -21,11 +24,11 @@ export default function PricingPlans() {
         'Soporte comunitario'
       ],
       ctaText: 'Empezar Gratis',
-      ctaLink: '/admin/login?mode=register&plan=gratis',
       isPopular: false,
       badgeColor: 'border-slate-700 text-slate-300'
     },
     {
+      id: 'pro',
       name: 'Pro',
       price: '$19',
       period: '/ mes',
@@ -40,11 +43,11 @@ export default function PricingPlans() {
         'Soporte prioritario por WhatsApp'
       ],
       ctaText: 'Obtener Plan Pro',
-      ctaLink: '/admin/login?mode=register&plan=pro',
       isPopular: true,
       badgeColor: 'border-cyan-400 text-cyan-300 bg-cyan-950/60'
     },
     {
+      id: 'ilimitado',
       name: 'Ilimitado',
       price: '$49',
       period: '/ mes',
@@ -59,7 +62,6 @@ export default function PricingPlans() {
         'Soporte técnico VIP 24/7 asignado'
       ],
       ctaText: 'Suscribirse a Ilimitado',
-      ctaLink: '/admin/login?mode=register&plan=ilimitado',
       isPopular: false,
       badgeColor: 'border-violet-400 text-violet-300 bg-violet-950/60'
     }
@@ -136,9 +138,10 @@ export default function PricingPlans() {
             </div>
 
             {/* CTA Button */}
-            <Link
-              href={plan.ctaLink}
-              className={`w-full py-4 rounded-2xl font-extrabold text-sm font-mono tracking-wide transition-all duration-300 flex items-center justify-center space-x-2 ${
+            <button
+              type="button"
+              onClick={() => openAuthModal('register', plan.id)}
+              className={`w-full py-4 rounded-2xl font-extrabold text-sm font-mono tracking-wide transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer ${
                 plan.isPopular
                   ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-black hover:from-cyan-300 hover:to-blue-400 shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/40'
                   : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
@@ -146,7 +149,7 @@ export default function PricingPlans() {
             >
               <span>{plan.ctaText}</span>
               <ArrowRight className="w-4 h-4" />
-            </Link>
+            </button>
           </motion.div>
         ))}
       </div>

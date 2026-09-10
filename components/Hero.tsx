@@ -8,7 +8,7 @@ import { Trophy, ArrowRight, ShieldCheck, Tv, Zap, CheckCircle2, PlusCircle } fr
 import { useAppStore } from '@/lib/store';
 
 export default function Hero() {
-  const { activeRaffle, raffles } = useAppStore();
+  const { activeRaffle, raffles, openAuthModal } = useAppStore();
   const hasRaffles = raffles.length > 0 && Boolean(activeRaffle.id);
 
   const scrollToSection = (id: string) => {
@@ -76,19 +76,20 @@ export default function Hero() {
           <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
             <button
               onClick={() => scrollToSection('sorteos-activos')}
-              className="px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 text-white font-extrabold text-lg tracking-wide shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center space-x-3 group"
+              className="px-8 py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-violet-600 text-white font-extrabold text-lg tracking-wide shadow-xl shadow-cyan-500/25 hover:shadow-cyan-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center space-x-3 group cursor-pointer"
             >
               <Trophy className="w-6 h-6 text-yellow-300 group-hover:rotate-12 transition-transform" />
               <span>Ver Sorteos Activos</span>
               <ArrowRight className="w-5 h-5 text-cyan-200 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            <Link
-              href="/admin/login?mode=register"
-              className="px-6 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/40 text-cyan-400 font-extrabold text-sm font-mono tracking-wide transition-all duration-300 flex items-center justify-center space-x-2 text-center"
+            <button
+              type="button"
+              onClick={() => openAuthModal('register', 'gratis')}
+              className="px-6 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-cyan-500/40 text-cyan-400 font-extrabold text-sm font-mono tracking-wide transition-all duration-300 flex items-center justify-center space-x-2 text-center cursor-pointer shadow-lg shadow-cyan-500/10"
             >
               <span>Crear Cuenta Gratis</span>
-            </Link>
+            </button>
           </div>
         </motion.div>
 
@@ -159,13 +160,14 @@ export default function Hero() {
                   Registrate gratis y creá tu primer sorteo con link de transmisión en vivo y cartón interactivo.
                 </p>
               </div>
-              <Link
-                href="/admin/login?mode=register"
-                className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs font-mono uppercase tracking-wider text-center transition-all shadow-md flex items-center justify-center space-x-2"
+              <button
+                type="button"
+                onClick={() => openAuthModal('register', 'gratis')}
+                className="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs font-mono uppercase tracking-wider text-center transition-all shadow-md flex items-center justify-center space-x-2 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4 text-black" />
                 <span>Crear Sorteo Ahora</span>
-              </Link>
+              </button>
             </div>
           )}
         </motion.div>

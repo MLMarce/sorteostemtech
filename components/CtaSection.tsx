@@ -4,8 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Sparkles, Trophy, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
 
 export default function CtaSection() {
+  const { openAuthModal } = useAppStore();
+
   return (
     <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
       <motion.div
@@ -35,21 +38,22 @@ export default function CtaSection() {
 
           {/* Action buttons */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <Link
-              href="/admin/login?mode=register"
-              className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 text-black font-extrabold text-base font-mono tracking-wide shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center space-x-3 group"
+            <button
+              type="button"
+              onClick={() => openAuthModal('register', 'gratis')}
+              className="w-full sm:w-auto px-9 py-4 rounded-2xl bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-600 text-black font-extrabold text-base font-mono tracking-wide shadow-xl shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center space-x-3 group cursor-pointer"
             >
               <Trophy className="w-5 h-5 text-yellow-300 group-hover:rotate-12 transition-transform" />
               <span>Crear Mi Cuenta Administradora</span>
               <ArrowRight className="w-5 h-5 text-black group-hover:translate-x-1 transition-transform" />
-            </Link>
+            </button>
 
-            <Link
+            <a
               href="#sorteos-activos"
               className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-200 font-extrabold text-base font-mono tracking-wide transition-all duration-300 flex items-center justify-center space-x-2"
             >
               <span>Ver Sorteos Activos</span>
-            </Link>
+            </a>
           </div>
 
           <div className="pt-4 flex items-center justify-center space-x-6 text-xs text-slate-400 font-mono">

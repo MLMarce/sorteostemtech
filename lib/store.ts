@@ -51,6 +51,9 @@ interface AppState {
   selectedNumber: RaffleNumber | null;
   isReservationOpen: boolean;
   isQrModalOpen: boolean;
+  isAuthModalOpen: boolean;
+  authModalMode: 'login' | 'register';
+  authModalPlan: string;
   filterStatus: 'all' | NumberStatus;
   searchQuery: string;
   isAdminLoggedIn: boolean;
@@ -64,6 +67,9 @@ interface AppState {
   setSelectedNumber: (num: RaffleNumber | null) => void;
   setReservationOpen: (open: boolean) => void;
   setQrModalOpen: (open: boolean) => void;
+  openAuthModal: (mode?: 'login' | 'register', plan?: string) => void;
+  closeAuthModal: () => void;
+  setAuthModalMode: (mode: 'login' | 'register') => void;
   setFilterStatus: (status: 'all' | NumberStatus) => void;
   setSearchQuery: (query: string) => void;
   setSettings: (settings: Settings) => void;
@@ -84,6 +90,9 @@ export const useAppStore = create<AppState>((set) => ({
   selectedNumber: null,
   isReservationOpen: false,
   isQrModalOpen: false,
+  isAuthModalOpen: false,
+  authModalMode: 'login',
+  authModalPlan: 'gratis',
   filterStatus: 'all',
   searchQuery: '',
   isAdminLoggedIn: false,
@@ -100,6 +109,13 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedNumber: (num) => set({ selectedNumber: num }),
   setReservationOpen: (open) => set({ isReservationOpen: open }),
   setQrModalOpen: (open) => set({ isQrModalOpen: open }),
+  openAuthModal: (mode = 'login', plan = 'gratis') => set({ 
+    isAuthModalOpen: true, 
+    authModalMode: mode, 
+    authModalPlan: plan 
+  }),
+  closeAuthModal: () => set({ isAuthModalOpen: false }),
+  setAuthModalMode: (mode) => set({ authModalMode: mode }),
   setFilterStatus: (status) => set({ filterStatus: status }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSettings: (settings) => set({ settings }),

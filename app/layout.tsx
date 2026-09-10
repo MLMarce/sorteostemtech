@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from 'sonner';
 import Header from '@/components/Header';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import AuthModal from '@/components/AuthModal';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -32,6 +33,9 @@ export default function RootLayout({
           </ErrorBoundary>
         </main>
         
+        {/* Global Auth Modal (Login / Register) */}
+        <AuthModal />
+
         {/* Footer */}
         <footer className="glass-panel border-t border-cyan-500/20 py-8 px-4 text-center mt-12">
           <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-slate-400">

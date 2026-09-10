@@ -4,13 +4,13 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Calendar, Sparkles, ArrowRight, UserCheck, Tv, Trophy, AlertCircle, RefreshCw } from 'lucide-react';
+import { Calendar, Sparkles, ArrowRight, UserCheck, Tv, Trophy, RefreshCw } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Raffle } from '@/lib/types';
 import { getActiveRaffles } from '@/lib/supabaseClient';
 
 export default function ActiveRafflesGrid() {
-  const { raffles, setRaffles, setActiveRaffle } = useAppStore();
+  const { raffles, setRaffles, setActiveRaffle, openAuthModal } = useAppStore();
   const [loading, setLoading] = useState(true);
 
   const loadRaffles = async () => {
@@ -64,13 +64,14 @@ export default function ActiveRafflesGrid() {
             Sé el primero en crear y publicar un sorteo en la plataforma. Creá tu cuenta gratis y empezá en 2 minutos.
           </p>
           <div className="pt-2">
-            <Link
-              href="/admin/login?mode=register"
-              className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs font-mono transition-all shadow-lg shadow-cyan-500/20"
+            <button
+              type="button"
+              onClick={() => openAuthModal('register', 'gratis')}
+              className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs font-mono transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
             >
               <span>Crear Sorteo Gratis</span>
               <ArrowRight className="w-4 h-4 text-black" />
-            </Link>
+            </button>
           </div>
         </div>
       )}

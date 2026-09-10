@@ -13,14 +13,14 @@ export default function Header() {
     isAdminLoggedIn, 
     setAdminLoggedIn, 
     activeAdmin, 
-    setActiveAdminProfile 
+    setActiveAdminProfile,
+    openAuthModal 
   } = useAppStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   // Initialize auth listener with Supabase
   useEffect(() => {
-    // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setAdminLoggedIn(true);
@@ -43,7 +43,6 @@ export default function Header() {
       }
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setAdminLoggedIn(true);
@@ -82,7 +81,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full glass-panel border-b border-cyan-500/20 backdrop-blur-xl bg-black/60">
+    <header className="sticky top-0 z-40 w-full glass-panel border-b border-cyan-500/20 backdrop-blur-xl bg-black/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
 
         {/* Brand / Logo */}
@@ -152,20 +151,22 @@ export default function Header() {
           ) : (
             /* ─── Logged-out state ─── */
             <div className="flex items-center space-x-3">
-              <Link
-                href="/admin/login"
-                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs sm:text-sm font-mono font-semibold transition-all duration-200"
+              <button
+                type="button"
+                onClick={() => openAuthModal('login')}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs sm:text-sm font-mono font-semibold transition-all duration-200 cursor-pointer"
               >
                 <LogIn className="w-4 h-4 text-cyan-400" />
                 <span>Iniciar Sesión</span>
-              </Link>
+              </button>
 
-              <Link
-                href="/admin/login?mode=register"
-                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs sm:text-sm font-mono transition-all duration-200 shadow-lg shadow-cyan-500/20"
+              <button
+                type="button"
+                onClick={() => openAuthModal('register', 'gratis')}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs sm:text-sm font-mono transition-all duration-200 shadow-lg shadow-cyan-500/20 cursor-pointer"
               >
                 <span>Crear Cuenta</span>
-              </Link>
+              </button>
             </div>
           )}
 
@@ -234,21 +235,21 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link
-                  href="/admin/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center space-x-2 w-full py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-mono text-sm"
+                <button
+                  type="button"
+                  onClick={() => { openAuthModal('login'); setMobileMenuOpen(false); }}
+                  className="flex items-center space-x-2 w-full py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-mono text-sm cursor-pointer"
                 >
                   <LogIn className="w-4 h-4 text-cyan-400" />
                   <span>Iniciar Sesión</span>
-                </Link>
-                <Link
-                  href="/admin/login?mode=register"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-center w-full py-2.5 px-3 rounded-xl bg-cyan-500 text-black font-extrabold font-mono text-sm"
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { openAuthModal('register', 'gratis'); setMobileMenuOpen(false); }}
+                  className="flex items-center justify-center w-full py-2.5 px-3 rounded-xl bg-cyan-500 text-black font-extrabold font-mono text-sm cursor-pointer"
                 >
                   Crear Cuenta Gratis
-                </Link>
+                </button>
               </>
             )}
           </div>
