@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Raffle, RaffleStatus, RaffleNumber, DrawHistory } from '@/lib/types';
-import { Plus, CheckCircle, Tv, Edit3, Trash2, Trophy, Play, RefreshCcw, Lock, Sparkles } from 'lucide-react';
+import { Plus, CheckCircle, Tv, Edit3, Trash2, Trophy, Play, RefreshCcw, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   getAdminRaffles, 
@@ -17,6 +17,7 @@ import {
 } from '@/lib/supabaseClient';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
+import RafflePromoGenerator from '@/components/RafflePromoGenerator';
 
 export default function AdminRafflesPage() {
   const { 
@@ -53,6 +54,7 @@ export default function AdminRafflesPage() {
   const [winner, setWinner] = useState<{ number: number; name: string } | null>(null);
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [drawHistoryList, setDrawHistoryList] = useState<DrawHistory[]>([]);
+  const [showPromo, setShowPromo] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -477,6 +479,24 @@ export default function AdminRafflesPage() {
         </div>
       )}
 
+      {/* ─── PROMO IMAGE GENERATOR ─── */}
+      {!isCreatingNew && activeRaffle.id && (
+        <div className="glass-panel p-4 sm:p-5 rounded-2xl border border-violet-500/30 flex items-center justify-between gap-4 bg-gradient-to-r from-violet-950/30 to-pink-950/20">
+          <div>
+            <p className="text-xs font-mono text-violet-300 uppercase tracking-wider font-bold">Publicidad del Sorteo</p>
+            <p className="text-sm text-slate-300 mt-0.5">Crea una imagen lista para compartir en Instagram y WhatsApp con el QR del sorteo.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPromo(true)}
+            className="flex-shrink-0 flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-pink-600 hover:from-violet-400 hover:to-pink-500 text-white font-extrabold text-xs font-mono shadow-lg shadow-violet-500/30 transition-all cursor-pointer"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Crear Publicidad</span>
+          </button>
+        </div>
+      )}
+
       {/* Edit or Create Raffle Form */}
       <form onSubmit={handleSaveRaffle} className="glass-panel p-6 sm:p-8 rounded-3xl border border-cyan-500/30 space-y-6">
         
@@ -642,6 +662,17 @@ export default function AdminRafflesPage() {
         </div>
 
       </form>
+
+      {/* Promo Image Generator Modal */}
+      <AnimatePresence>
+        {showPromo && activeRaffle.id && (
+          <RafflePromoGenerator
+            raffle={activeRaffle}
+            numbers={numbers}
+            onClose={() => setShowPromo(false)}
+          />
+        )}
+      </AnimatePresence>
 
     </main>
   );

@@ -171,7 +171,7 @@ export default function Header() {
             </div>
           ) : (
             /* ─── Logged-out state ─── */
-            <div className="flex items-center space-x-3">
+            <div className="hidden md:flex items-center space-x-3">
               <button
                 type="button"
                 onClick={() => openAuthModal('login')}

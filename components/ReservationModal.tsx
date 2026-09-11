@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { X, Send, Copy, Check, CheckCircle2 } from 'lucide-react';
-import QRCode from 'qrcode';
 import { useAppStore } from '@/lib/store';
 import { RaffleNumber } from '@/lib/types';
 import { generateTicketPdf } from '@/lib/pdfUtils';
@@ -29,7 +28,6 @@ interface ReservationModalProps {
 
 export default function ReservationModal({ ticket, onClose, onReserved }: ReservationModalProps) {
   const { raffle, settings, setNumbers } = useAppStore();
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [copiedAlias, setCopiedAlias] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -42,18 +40,6 @@ export default function ReservationModal({ ticket, onClose, onReserved }: Reserv
     }
   });
 
-  // Generate QR Code dynamically from Alias
-  useEffect(() => {
-    if (settings.alias) {
-      QRCode.toDataURL(`mpba://${settings.alias}`, {
-        margin: 1,
-        width: 240,
-        color: { dark: '#00E5FF', light: '#0D1117' },
-      })
-        .then((url) => setQrCodeUrl(url))
-        .catch(() => {});
-    }
-  }, [settings.alias]);
 
   if (!ticket) return null;
 
@@ -183,48 +169,35 @@ export default function ReservationModal({ ticket, onClose, onReserved }: Reserv
           </div>
         </div>
 
-        {/* Bank Transfer Details & Dynamic QR Code */}
+        {/* Bank Transfer Details */}
         <div className="glass-panel p-4 rounded-2xl border border-cyan-500/30 mb-5 bg-slate-950/80">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+          <div className="space-y-2 text-xs w-full">
+            <span className="text-[10px] text-cyan-400 font-mono block uppercase font-bold tracking-wider">
+              DATOS DE TRANSFERENCIA BANCARIA
+            </span>
             
-            <div className="space-y-2 text-xs w-full">
-              <span className="text-[10px] text-cyan-400 font-mono block uppercase font-bold tracking-wider">
-                DATOS DE TRANSFERENCIA BANCARIA
-              </span>
-              
-              <p className="text-slate-200">
-                Titular: <strong className="text-white font-semibold">{settings.holder || 'Consultar por WhatsApp'}</strong>
-              </p>
+            <p className="text-slate-200">
+              Titular: <strong className="text-white font-semibold">{settings.holder || 'Consultar por WhatsApp'}</strong>
+            </p>
 
-              {/* Alias Box with Copy Button */}
-              {settings.alias ? (
-                <div className="flex items-center justify-between bg-slate-900/90 px-3 py-2 rounded-xl border border-cyan-500/30">
-                  <div className="truncate">
-                    <span className="text-slate-400 text-[11px] block">Alias CBU / MP:</span>
-                    <strong className="text-cyan-300 font-mono text-sm">{settings.alias}</strong>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={copyAlias}
-                    className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 border border-cyan-500/40 transition-colors flex items-center space-x-1 font-mono text-xs"
-                  >
-                    {copiedAlias ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedAlias ? 'Copiado' : 'Copiar Alias'}</span>
-                  </button>
+            {/* Alias Box with Copy Button */}
+            {settings.alias ? (
+              <div className="flex items-center justify-between bg-slate-900/90 px-3 py-2 rounded-xl border border-cyan-500/30">
+                <div className="truncate">
+                  <span className="text-slate-400 text-[11px] block">Alias CBU / MP:</span>
+                  <strong className="text-cyan-300 font-mono text-sm">{settings.alias}</strong>
                 </div>
-              ) : (
-                <p className="text-xs text-slate-400 font-mono">Alias configurado por el organizador al confirmar por WhatsApp.</p>
-              )}
-            </div>
-
-            {/* Dynamic QR Code for Mobile Scanning */}
-            {qrCodeUrl && (
-              <div className="flex flex-col items-center flex-shrink-0">
-                <div className="p-1.5 rounded-2xl bg-[#0D1117] border border-cyan-500/40 shadow-md">
-                  <img src={qrCodeUrl} alt="QR Alias" className="w-20 h-20 rounded-xl" />
-                </div>
-                <span className="text-[9px] font-mono text-cyan-400/90 mt-1 uppercase">Escaneá QR</span>
+                <button
+                  type="button"
+                  onClick={copyAlias}
+                  className="px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 border border-cyan-500/40 transition-colors flex items-center space-x-1 font-mono text-xs"
+                >
+                  {copiedAlias ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedAlias ? 'Copiado' : 'Copiar Alias'}</span>
+                </button>
               </div>
+            ) : (
+              <p className="text-xs text-slate-400 font-mono">Alias configurado por el organizador al confirmar por WhatsApp.</p>
             )}
           </div>
 

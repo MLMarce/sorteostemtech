@@ -1,5 +1,4 @@
 import { jsPDF } from 'jspdf';
-import QRCode from 'qrcode';
 import { Raffle, RaffleNumber, Settings } from './types';
 
 export async function generateTicketPdf(
@@ -73,25 +72,16 @@ export async function generateTicketPdf(
   doc.text(`Titular: ${settings.holder}`, 10, 100);
   doc.text(`Fecha del Sorteo: ${raffle.draw_date}`, 10, 106);
 
-  // Generate QR Code for Alias
-  try {
-    const qrDataUrl = await QRCode.toDataURL(`mpba://${settings.alias}`, {
-      margin: 1,
-      width: 100,
-      color: {
-        dark: '#00E5FF',
-        light: '#0D1117',
-      },
-    });
-    doc.addImage(qrDataUrl, 'PNG', 35, 112, 30, 30);
-  } catch (e) {
-    console.error('Failed to generate QR for PDF:', e);
-  }
+  // Divider
+  doc.setDrawColor(0, 229, 255);
+  doc.setLineWidth(0.3);
+  doc.line(10, 112, 90, 112);
 
   // Footer text
-  doc.setFontSize(6);
+  doc.setFontSize(7);
   doc.setTextColor(107, 114, 128);
-  doc.text('Enviá tu comprobante de pago por WhatsApp para confirmar tu número.', 50, 144, { align: 'center' });
+  doc.text('Enviá tu comprobante de pago por WhatsApp para confirmar.', 50, 120, { align: 'center' });
+  doc.text('Una vez verificado, tu número queda CONFIRMADO oficialmente.', 50, 126, { align: 'center' });
 
   // Save PDF
   doc.save(`Ticket_TEMTECH_Num_${formattedNum}.pdf`);
