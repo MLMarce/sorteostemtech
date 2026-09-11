@@ -16,6 +16,13 @@ export const metadata: Metadata = {
   title: 'Sorteos TEMTECH - Sorteos y Rifas Online Futuristas',
   description: 'Plataforma interactiva en tiempo real para sorteos online, rifas y transmisiones en vivo con diseño cyberpunk holográfico.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
