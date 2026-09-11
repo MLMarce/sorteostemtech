@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, LayoutDashboard, LogIn, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, LogIn, LogOut, Menu, X } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { supabase, getProfile } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
@@ -86,11 +86,32 @@ export default function Header() {
 
         {/* Brand / Logo */}
         <Link href="/" className="flex items-center space-x-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-violet-600 p-[1px] shadow-lg shadow-cyan-500/20 group-hover:shadow-cyan-500/40 transition-all duration-300">
-            <div className="w-full h-full bg-[#0D1117] rounded-[11px] flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" />
-            </div>
-          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" className="w-10 h-10 drop-shadow-[0_0_8px_rgba(0,229,255,0.5)] group-hover:drop-shadow-[0_0_14px_rgba(0,229,255,0.7)] transition-all duration-300">
+            <defs>
+              <radialGradient id="hbg" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#0D1117"/>
+                <stop offset="100%" stopColor="#060A10"/>
+              </radialGradient>
+              <radialGradient id="hglow" cx="50%" cy="40%" r="55%">
+                <stop offset="0%" stopColor="#00E5FF" stopOpacity="0.3"/>
+                <stop offset="100%" stopColor="#00E5FF" stopOpacity="0"/>
+              </radialGradient>
+              <linearGradient id="hstar" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#00E5FF"/>
+                <stop offset="50%" stopColor="#7C3AED"/>
+                <stop offset="100%" stopColor="#00E5FF"/>
+              </linearGradient>
+            </defs>
+            <rect width="32" height="32" rx="7" fill="url(#hbg)"/>
+            <rect width="32" height="32" rx="7" fill="url(#hglow)"/>
+            <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="6.5" stroke="#00E5FF" strokeWidth="1.5" strokeOpacity="0.7"/>
+            <rect x="7" y="9" width="18" height="3.5" rx="1.5" fill="url(#hstar)"/>
+            <rect x="13.25" y="12.5" width="5.5" height="11" rx="1.5" fill="url(#hstar)"/>
+            <circle cx="5.5" cy="5.5" r="1" fill="#00E5FF" fillOpacity="0.5"/>
+            <circle cx="26.5" cy="5.5" r="1" fill="#00E5FF" fillOpacity="0.5"/>
+            <circle cx="5.5" cy="26.5" r="1" fill="#7C3AED" fillOpacity="0.5"/>
+            <circle cx="26.5" cy="26.5" r="1" fill="#7C3AED" fillOpacity="0.5"/>
+          </svg>
           <div>
             <span className="font-extrabold text-xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-violet-400">
               TEMTECH
