@@ -62,6 +62,9 @@ export default function AdminRafflesPage() {
         setRaffles(list);
         if (list.length > 0) {
           selectRaffle(list[0]);
+        } else {
+          // No raffles yet — auto-open the creation form
+          setIsCreatingNew(true);
         }
       }
     } catch (err) {
@@ -130,10 +133,13 @@ export default function AdminRafflesPage() {
       return;
     }
 
+    // Safety guard: if activeRaffle has no valid id, force creation mode
+    const effectivelyCreatingNew = isCreatingNew || !activeRaffle.id;
+
     setSaving(true);
 
     try {
-      if (isCreatingNew) {
+      if (effectivelyCreatingNew) {
         // Create in Supabase
         const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
         const created = await createRaffle({
@@ -163,6 +169,11 @@ export default function AdminRafflesPage() {
         }
       } else {
         // Update in Supabase
+        if (!activeRaffle.id) {
+          toast.error('No hay un sorteo seleccionado para editar.');
+          setSaving(false);
+          return;
+        }
         const ok = await updateRaffle(activeRaffle.id, {
           title,
           description,
